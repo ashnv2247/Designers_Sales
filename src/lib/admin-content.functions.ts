@@ -362,8 +362,10 @@ export const adminEditBlogPost = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context as Ctx);
     const { id, ...patch } = data;
-    const next: Record<string, unknown> = { ...patch };
-    if (patch.status === "published") next.published_at = new Date().toISOString();
+    const next = {
+      ...patch,
+      ...(patch.status === "published" ? { published_at: new Date().toISOString() } : {}),
+    };
     const { error } = await context.supabase.from("blog_posts").update(next).eq("id", id);
     if (error) throw new Error(error.message);
     return { ok: true };
