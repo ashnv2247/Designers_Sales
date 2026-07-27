@@ -117,7 +117,7 @@ export const adminUpdateProduct = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await assertAdmin(context as Ctx);
-    const patch: Record<string, unknown> = {};
+    const patch: { status?: (typeof PRODUCT_STATUS)[number]; is_featured?: boolean } = {};
     if (data.status) patch.status = data.status;
     if (typeof data.is_featured === "boolean") patch.is_featured = data.is_featured;
     if (Object.keys(patch).length === 0) return { ok: true };
@@ -154,7 +154,7 @@ export const adminUpdateMerchant = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await assertAdmin(context as Ctx);
-    const patch: Record<string, unknown> = {};
+    const patch: { status?: (typeof MERCHANT_STATUS)[number]; is_active?: boolean } = {};
     if (data.status) patch.status = data.status;
     if (typeof data.is_active === "boolean") patch.is_active = data.is_active;
     if (Object.keys(patch).length === 0) return { ok: true };
