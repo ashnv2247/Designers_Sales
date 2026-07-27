@@ -14,7 +14,10 @@ const TABS: { to: string; label: string; exact?: boolean }[] = [
   { to: "/admin/orders", label: "Orders" },
   { to: "/admin/products", label: "Products" },
   { to: "/admin/merchants", label: "Merchants" },
+  { to: "/admin/sales", label: "Sales" },
+  { to: "/admin/blog", label: "Journal" },
   { to: "/admin/users", label: "Users & roles" },
+
 ];
 
 function AdminLayout() {
