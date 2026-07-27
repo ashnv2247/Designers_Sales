@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { SearchIcon, HeartIcon, BagIcon, MenuIcon, CloseIcon } from "./Icons";
 import { useCart } from "@/lib/cart";
 import { useSession } from "@/lib/use-session";
+import { supabase } from "@/integrations/supabase/client";
 
 const LINKS: { label: string; to: string; params?: { category: string } }[] = [
   { label: "New In", to: "/shop" },
@@ -19,6 +20,27 @@ export function Nav({ overlay = false }: { overlay?: boolean }) {
   const [open, setOpen] = useState(false);
   const { count } = useCart();
   const { user } = useSession();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    if (!user) {
+      setIsAdmin(false);
+      return;
+    }
+    supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .eq("role", "admin")
+      .maybeSingle()
+      .then(({ data }) => {
+        if (active) setIsAdmin(Boolean(data));
+      });
+    return () => {
+      active = false;
+    };
+  }, [user]);
 
   useEffect(() => {
     let last = window.scrollY;
@@ -77,6 +99,16 @@ export function Nav({ overlay = false }: { overlay?: boolean }) {
             <button aria-label="Search" className="transition-opacity duration-200 hover:opacity-60">
               <SearchIcon />
             </button>
+            {isAdmin && (
+              <Link
+                to="/admin"
+                className={`hidden text-[0.62rem] uppercase tracking-[0.18em] transition-colors duration-200 sm:block ${
+                  light ? "text-ivory/70 hover:text-gold" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Admin
+              </Link>
+            )}
             <Link
               to={user ? "/orders" : "/auth"}
               className={`hidden text-[0.62rem] uppercase tracking-[0.18em] transition-colors duration-200 sm:block ${
@@ -150,6 +182,11 @@ export function Nav({ overlay = false }: { overlay?: boolean }) {
             <Link to={user ? "/orders" : "/auth"} onClick={() => setOpen(false)} className="link-underline">
               {user ? "Account" : "Login"}
             </Link>
+            {isAdmin && (
+              <Link to="/admin" onClick={() => setOpen(false)} className="link-underline">
+                Admin
+              </Link>
+            )}
           </div>
         </aside>
       </div>
