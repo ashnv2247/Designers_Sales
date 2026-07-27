@@ -9,13 +9,13 @@ export const Route = createFileRoute("/_authenticated/admin")({
   component: AdminLayout,
 });
 
-const TABS = [
+const TABS: { to: string; label: string; exact?: boolean }[] = [
   { to: "/admin", label: "Overview", exact: true },
   { to: "/admin/orders", label: "Orders" },
   { to: "/admin/products", label: "Products" },
   { to: "/admin/merchants", label: "Merchants" },
   { to: "/admin/users", label: "Users & roles" },
-] as const;
+];
 
 function AdminLayout() {
   const check = useServerFn(getMyAdminAccess);
