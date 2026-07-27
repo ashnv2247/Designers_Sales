@@ -42,7 +42,7 @@ function AdminOverview() {
 
   return (
     <div className="grid gap-x-10 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
-      <Stat label="Revenue" value={money(data.revenueCents / 100)} hint="Excludes cancelled orders" />
+      <Stat label="Revenue" value={money(data.revenueCents)} hint="Excludes cancelled orders" />
       <Stat label="Orders" value={String(data.orderCount)} hint={`${data.openOrders} still in progress`} />
       <Stat
         label="Products"
