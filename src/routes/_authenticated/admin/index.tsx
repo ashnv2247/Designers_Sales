@@ -42,6 +42,16 @@ export const Route = createFileRoute("/_authenticated/admin/")({
   component: Dashboard,
 });
 
+function ChartFrame({ empty, children }: { empty: boolean; children: React.ReactNode }) {
+  if (empty)
+    return (
+      <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
+        No data for this period.
+      </div>
+    );
+  return <div className="h-64">{children}</div>;
+}
+
 const PIE_COLORS = ["#0ea5e9", "#f59e0b", "#10b981", "#ef4444", "#94a3b8", "#6366f1"];
 
 function Dashboard() {
@@ -131,7 +141,7 @@ function Dashboard() {
 
           <div className="grid gap-4 lg:grid-cols-2">
             <Card title="Revenue over time">
-              <div className="h-64">
+              <ChartFrame empty={data.series.length === 0}>
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={data.series}>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
@@ -141,11 +151,11 @@ function Dashboard() {
                     <Line type="monotone" dataKey="revenue" stroke="#0f766e" strokeWidth={2} dot={false} />
                   </LineChart>
                 </ResponsiveContainer>
-              </div>
+              </ChartFrame>
             </Card>
 
             <Card title="Orders over time">
-              <div className="h-64">
+              <ChartFrame empty={data.series.length === 0}>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={data.series}>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
@@ -155,11 +165,11 @@ function Dashboard() {
                     <Bar dataKey="orders" fill="#0ea5e9" radius={[3, 3, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
-              </div>
+              </ChartFrame>
             </Card>
 
             <Card title="Orders by status">
-              <div className="h-64">
+              <ChartFrame empty={data.ordersByStatus.length === 0}>
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
@@ -176,11 +186,11 @@ function Dashboard() {
                     <Tooltip />
                   </PieChart>
                 </ResponsiveContainer>
-              </div>
+              </ChartFrame>
             </Card>
 
             <Card title="Products by status">
-              <div className="h-64">
+              <ChartFrame empty={data.productsByStatus.length === 0}>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
                     data={data.productsByStatus.map((s) => ({ name: humanStatus(s.status), value: s.value }))}
@@ -193,7 +203,7 @@ function Dashboard() {
                     <Bar dataKey="value" fill="#f59e0b" radius={[0, 3, 3, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
-              </div>
+              </ChartFrame>
             </Card>
 
             <Card title="Top-selling products">
