@@ -16,7 +16,7 @@ import {
   StatusBadge,
 } from "@/components/admin/kit";
 import { adminOrdersExport, adminOrdersPage, adminSetOrderStatus } from "@/lib/admin-orders.functions";
-import { downloadCsv, formatDate, humanStatus } from "@/lib/admin-metrics";
+import { downloadCsv, formatDate, friendlyError, humanStatus } from "@/lib/admin-metrics";
 import { money } from "@/lib/cart";
 
 const STATUSES = ["confirmed", "preparing", "in_transit", "delivered", "cancelled"] as const;
@@ -102,7 +102,7 @@ function OrdersList() {
       qc.invalidateQueries({ queryKey: ["admin-orders"] });
       qc.invalidateQueries({ queryKey: ["admin-dashboard"] });
     },
-    onError: (e: Error) => toast.error(friendly(e.message)),
+    onError: (e: Error) => toast.error(friendlyError(e.message)),
   });
 
   const exportMutation = useMutation({
@@ -128,7 +128,7 @@ function OrdersList() {
       );
       toast.success(`Exported ${rows.length} orders`);
     },
-    onError: (e: Error) => toast.error(friendly(e.message)),
+    onError: (e: Error) => toast.error(friendlyError(e.message)),
   });
 
   const rows = data?.rows ?? [];
@@ -258,7 +258,7 @@ function OrdersList() {
 
       <div className="mt-4 overflow-hidden rounded-lg border border-border bg-card shadow-sm">
         {isPending && <div className="p-4"><LoadingSkeleton /></div>}
-        {error && <ErrorState message={friendly((error as Error).message)} onRetry={() => refetch()} />}
+        {error && <ErrorState message={friendlyError((error as Error).message)} onRetry={() => refetch()} />}
         {data && rows.length === 0 && (
           <EmptyState title="No orders match these filters" hint="Try clearing the search or date range." />
         )}
@@ -388,9 +388,3 @@ const tab = (active: boolean) =>
   `rounded-md border px-3 py-1.5 text-xs transition-colors ${
     active ? "border-foreground bg-foreground text-background" : "border-border bg-card hover:bg-muted"
   }`;
-
-export function friendly(message: string) {
-  if (/forbidden/i.test(message)) return "You do not have permission to perform this action.";
-  if (/jwt|session|unauthor/i.test(message)) return "The session has expired. Please sign in again.";
-  return "Something went wrong. Please try again.";
-}

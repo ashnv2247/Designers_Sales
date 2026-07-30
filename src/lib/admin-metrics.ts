@@ -118,3 +118,14 @@ export function downloadCsv(filename: string, rows: Record<string, unknown>[]) {
   a.click();
   URL.revokeObjectURL(url);
 }
+
+/** Maps raw backend errors to language a non-technical administrator understands. */
+export function friendlyError(message: string) {
+  if (/duplicate key.*slug/i.test(message)) return "A record with this slug already exists.";
+  if (/duplicate key.*sku/i.test(message)) return "This SKU is already in use.";
+  if (/foreign key/i.test(message)) return "This record is still referenced elsewhere and cannot be deleted.";
+  if (/forbidden|row-level security|permission/i.test(message))
+    return "You do not have permission to perform this action.";
+  if (/jwt|session|unauthor/i.test(message)) return "The session has expired. Please sign in again.";
+  return "Something went wrong. Please try again.";
+}
