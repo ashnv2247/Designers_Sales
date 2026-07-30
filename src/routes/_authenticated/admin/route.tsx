@@ -14,8 +14,9 @@ export const Route = createFileRoute("/_authenticated/admin")({
 function AdminLayout() {
   const check = useServerFn(getMyAdminAccess);
   const { data, isPending } = useQuery({ queryKey: ["admin-access"], queryFn: () => check({}) });
-  const session = useSession();
-  const email = (session as any)?.user?.email ?? (session as any)?.session?.user?.email ?? null;
+  const { user } = useSession();
+  const email = user?.email ?? null;
+
 
   if (isPending) {
     return (
