@@ -6,7 +6,12 @@ import { toast } from "sonner";
 
 import { Btn, Check, Field, Panel, SelectInput, TextArea, TextInput } from "@/components/admin/ui";
 import { adminListMerchants, adminUpdateMerchant } from "@/lib/admin.functions";
-import { adminCreateMerchant, adminDeleteMerchant, adminEditMerchant } from "@/lib/admin-content.functions";
+import {
+  adminCreateMerchant,
+  adminDeleteMerchant,
+  adminEditMerchant,
+} from "@/lib/admin-content.functions";
+import { CloudinaryImageUploader } from "@/components/admin/CloudinaryImageUploader";
 
 const STATUSES = ["pending", "approved", "rejected", "suspended"] as const;
 const LABEL: Record<string, string> = {
@@ -20,7 +25,10 @@ export const Route = createFileRoute("/_authenticated/admin/merchants")({
   head: () => ({
     meta: [
       { title: "Admin Merchants | DesignerSale" },
-      { name: "description", content: "Add, edit, approve and suspend the boutiques selling on DesignerSale." },
+      {
+        name: "description",
+        content: "Add, edit, approve and suspend the boutiques selling on DesignerSale.",
+      },
       { property: "og:title", content: "Admin Merchants | DesignerSale" },
       { property: "og:description", content: "Approve and manage DesignerSale boutiques." },
       { property: "og:type", content: "website" },
@@ -41,6 +49,14 @@ function MerchantForm({
   pending: boolean;
   submitLabel: string;
 }) {
+  const [logo, setLogo] = useState({
+    url: merchant?.logo_url ?? "",
+    publicId: merchant?.logo_public_id ?? "",
+  });
+  const [cover, setCover] = useState({
+    url: merchant?.cover_image_url ?? "",
+    publicId: merchant?.cover_image_public_id ?? "",
+  });
   return (
     <form
       className="grid gap-5 md:grid-cols-2"
@@ -56,7 +72,9 @@ function MerchantForm({
           website_url: String(f.get("website_url") ?? ""),
           instagram_url: String(f.get("instagram_url") ?? ""),
           logo_url: String(f.get("logo_url") ?? ""),
+          logo_public_id: String(f.get("logo_public_id") ?? ""),
           cover_image_url: String(f.get("cover_image_url") ?? ""),
+          cover_image_public_id: String(f.get("cover_image_public_id") ?? ""),
           short_description: String(f.get("short_description") ?? ""),
           description: String(f.get("description") ?? ""),
           status: String(f.get("status")),
@@ -95,12 +113,28 @@ function MerchantForm({
       <Field label="Instagram">
         <TextInput name="instagram_url" defaultValue={merchant?.instagram_url ?? ""} />
       </Field>
-      <Field label="Logo URL">
-        <TextInput name="logo_url" defaultValue={merchant?.logo_url ?? ""} />
-      </Field>
-      <Field label="Cover image URL">
-        <TextInput name="cover_image_url" defaultValue={merchant?.cover_image_url ?? ""} />
-      </Field>
+      <div>
+        <CloudinaryImageUploader
+          label="Logo"
+          folder="merchants/logos"
+          value={logo.url}
+          publicId={logo.publicId}
+          onChange={(v) => setLogo({ url: v?.url ?? "", publicId: v?.publicId ?? "" })}
+        />
+        <input type="hidden" name="logo_url" value={logo.url} />
+        <input type="hidden" name="logo_public_id" value={logo.publicId} />
+      </div>
+      <div>
+        <CloudinaryImageUploader
+          label="Cover image"
+          folder="merchants/covers"
+          value={cover.url}
+          publicId={cover.publicId}
+          onChange={(v) => setCover({ url: v?.url ?? "", publicId: v?.publicId ?? "" })}
+        />
+        <input type="hidden" name="cover_image_url" value={cover.url} />
+        <input type="hidden" name="cover_image_public_id" value={cover.publicId} />
+      </div>
       <div className="md:col-span-2">
         <Field label="Short description">
           <TextInput name="short_description" defaultValue={merchant?.short_description ?? ""} />
@@ -113,11 +147,19 @@ function MerchantForm({
       </div>
       <div className="flex items-center gap-6 md:col-span-2">
         <label className="flex items-center gap-2 text-[0.62rem] uppercase tracking-[0.18em] text-muted-foreground">
-          <input type="checkbox" name="is_active" defaultChecked={merchant ? Boolean(merchant.is_active) : true} />
+          <input
+            type="checkbox"
+            name="is_active"
+            defaultChecked={merchant ? Boolean(merchant.is_active) : true}
+          />
           Active
         </label>
         <label className="flex items-center gap-2 text-[0.62rem] uppercase tracking-[0.18em] text-muted-foreground">
-          <input type="checkbox" name="is_featured" defaultChecked={Boolean(merchant?.is_featured)} />
+          <input
+            type="checkbox"
+            name="is_featured"
+            defaultChecked={Boolean(merchant?.is_featured)}
+          />
           Featured
         </label>
       </div>
@@ -140,7 +182,10 @@ function AdminMerchants() {
   const [showNew, setShowNew] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
 
-  const { data, isPending, error } = useQuery({ queryKey: ["admin-merchants"], queryFn: () => list({}) });
+  const { data, isPending, error } = useQuery({
+    queryKey: ["admin-merchants"],
+    queryFn: () => list({}),
+  });
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["admin-merchants"] });
@@ -188,7 +233,8 @@ function AdminMerchants() {
   });
 
   if (isPending) return <p className="text-sm text-muted-foreground">Loading merchants…</p>;
-  if (error || !data) return <p className="text-sm text-muted-foreground">We couldn't load merchants.</p>;
+  if (error || !data)
+    return <p className="text-sm text-muted-foreground">We couldn't load merchants.</p>;
 
   return (
     <>
@@ -206,7 +252,9 @@ function AdminMerchants() {
         </Panel>
       )}
 
-      {(data as any[]).length === 0 && <p className="text-sm text-muted-foreground">No merchants yet.</p>}
+      {(data as any[]).length === 0 && (
+        <p className="text-sm text-muted-foreground">No merchants yet.</p>
+      )}
 
       <ul className="border-t border-border">
         {(data as any[]).map((m) => (
@@ -230,7 +278,10 @@ function AdminMerchants() {
                   value={m.status}
                   disabled={mutation.isPending}
                   onChange={(e) =>
-                    mutation.mutate({ id: m.id, status: e.target.value as (typeof STATUSES)[number] })
+                    mutation.mutate({
+                      id: m.id,
+                      status: e.target.value as (typeof STATUSES)[number],
+                    })
                   }
                   className="border border-border bg-transparent px-3 py-2 text-[0.62rem] uppercase tracking-[0.18em]"
                 >

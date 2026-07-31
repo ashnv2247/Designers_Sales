@@ -4,6 +4,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { Btn, Check, Field, SelectInput, TextArea, TextInput } from "./ui";
+import { CloudinaryImageUploader, type UploadedCloudinaryImage } from "./CloudinaryImageUploader";
 import {
   adminAddProductImage,
   adminCreateVariant,
@@ -44,7 +45,7 @@ export function ProductEditor({ productId, refs }: { productId: string; refs: Re
   const key = ["admin-product", productId];
   const { data, isPending } = useQuery({ queryKey: key, queryFn: () => get({ data: { id: productId } }) });
 
-  const [imageUrl, setImageUrl] = useState("");
+  const [newImage, setNewImage] = useState<UploadedCloudinaryImage | null>(null);
   const [nv, setNv] = useState({ sku: "", sizes: "", original_price: "", discounted_price: "", stock: "0", color_id: "" });
 
   const refresh = () => {
@@ -62,12 +63,12 @@ export function ProductEditor({ productId, refs }: { productId: string; refs: Re
   });
 
   const imageMut = useMutation({
-    mutationFn: (vars: { add?: string; removeId?: string }) =>
+    mutationFn: (vars: { add?: UploadedCloudinaryImage; removeId?: string }) =>
       vars.add
-        ? addImage({ data: { product_id: productId, image_url: vars.add, is_primary: false } })
+        ? addImage({ data: { product_id: productId, image_url: vars.add.url, image_public_id: vars.add.publicId, is_primary: false } })
         : removeImage({ data: { id: vars.removeId! } }),
     onSuccess: () => {
-      setImageUrl("");
+      setNewImage(null);
       refresh();
     },
     onError: (e: Error) => toast.error(e.message || "Could not update images"),
@@ -193,17 +194,12 @@ export function ProductEditor({ productId, refs }: { productId: string; refs: Re
             </div>
           ))}
         </div>
-        <div className="mt-4 flex flex-wrap gap-3">
-          <TextInput
-            value={imageUrl}
-            onChange={(e) => setImageUrl(e.target.value)}
-            placeholder="https://image-url"
-            className="max-w-md"
-          />
+        <div className="mt-4 max-w-md space-y-3">
+          <CloudinaryImageUploader label="New product image" folder={`products/${productId}`} value={newImage?.url} publicId={newImage?.publicId} onChange={setNewImage} />
           <Btn
             variant="ghost"
-            disabled={!imageUrl.trim() || imageMut.isPending}
-            onClick={() => imageMut.mutate({ add: imageUrl.trim() })}
+            disabled={!newImage || imageMut.isPending}
+            onClick={() => newImage && imageMut.mutate({ add: newImage })}
           >
             Add image
           </Btn>

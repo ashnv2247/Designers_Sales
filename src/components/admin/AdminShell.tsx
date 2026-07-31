@@ -5,6 +5,7 @@ import {
   Bell,
   ChevronDown,
   FileText,
+  PanelsTopLeft,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -37,7 +38,10 @@ const SECTIONS: { heading: string; items: Item[] }[] = [
   },
   {
     heading: "Content",
-    items: [{ to: "/admin/blog", label: "Blog Posts", icon: FileText }],
+    items: [
+      { to: "/admin/blog", label: "Blog Posts", icon: FileText },
+      { to: "/admin/curated-pages", label: "Curated Pages", icon: PanelsTopLeft },
+    ],
   },
   {
     heading: "Administration",
@@ -92,7 +96,7 @@ export function AdminShell({ email, children }: { email?: string | null; childre
     await qc.cancelQueries();
     qc.clear();
     await supabase.auth.signOut();
-    navigate({ to: "/auth", replace: true });
+    navigate({ to: "/auth", search: { redirect: undefined }, replace: true });
   }
 
   return (

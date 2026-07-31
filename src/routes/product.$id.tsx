@@ -8,7 +8,7 @@ import { Footer } from "@/components/Footer";
 import { Reveal } from "@/components/Reveal";
 import { ProductCard } from "@/components/ProductCard";
 import { ArrowRight, HeartIcon } from "@/components/Icons";
-import { getTone } from "@/lib/catalog";
+import { getTone } from "@/lib/catalog-ui";
 import { catalogQuery, findItem, relatedItems } from "@/lib/catalog-queries";
 import { useCart } from "@/lib/cart";
 import { useImageTone } from "@/lib/useImageTone";
@@ -173,7 +173,7 @@ function ProductPage() {
             <p className="rule-label text-muted-foreground">{product.designer}</p>
             <h1 className="display mt-4 text-[clamp(2.2rem,4vw,3.4rem)] leading-[1.03]">{product.name}</h1>
 
-            <div className="mt-6 flex items-baseline gap-4">
+            <div className="mt-6 flex flex-wrap items-baseline gap-4">
               <span className="text-xl">{product.price}</span>
               {product.was && (
                 <span className="text-sm text-muted-foreground line-through">{product.was}</span>
@@ -181,7 +181,18 @@ function ProductPage() {
               {product.reduction > 0 && (
                 <span className="rule-label bg-olive-deep px-2 py-1 text-ivory">{product.reduction}% off</span>
               )}
+              {product.saleInfo && (
+                <span className="rule-label bg-gold text-ink font-semibold px-2 py-1">
+                  {product.saleInfo.name}
+                </span>
+              )}
             </div>
+
+            {product.saleInfo && (
+              <div className="mt-6 p-4 border border-gold/30 bg-gold/5 rounded text-sm text-muted-foreground animate-fade-in">
+                <span className="font-semibold text-foreground">Featured Edit:</span> This piece is part of the <span className="text-foreground font-semibold">{product.saleInfo.name}</span> event.
+              </div>
+            )}
 
             <dl className="mt-8 grid grid-cols-2 gap-x-6 gap-y-4 border-y border-border py-6 text-sm">
               <div>
@@ -226,7 +237,7 @@ function ProductPage() {
             <div className="mt-8 flex gap-3">
               <button
                 onClick={addToBag}
-                className="flex-1 bg-olive-deep py-4 text-[0.62rem] uppercase tracking-[0.24em] text-ivory transition-opacity duration-300 hover:opacity-85"
+                className="flex-1 bg-olive-deep py-4 text-[0.62rem] uppercase tracking-[0.24em] text-ivory transition-opacity duration-300 hover:opacity-85 cursor-pointer"
               >
                 Add to bag
               </button>
@@ -234,7 +245,7 @@ function ProductPage() {
                 onClick={() => setSaved((s) => !s)}
                 aria-pressed={saved}
                 aria-label="Save to wishlist"
-                className="flex w-14 items-center justify-center border border-border transition-colors duration-300 hover:border-olive-deep"
+                className="flex w-14 items-center justify-center border border-border transition-colors duration-300 hover:border-olive-deep cursor-pointer"
               >
                 <HeartIcon className={saved ? "fill-current text-gold" : ""} />
               </button>

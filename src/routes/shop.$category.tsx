@@ -8,29 +8,29 @@ import { Reveal } from "@/components/Reveal";
 import { ProductCard } from "@/components/ProductCard";
 import { ArrowRight, CloseIcon } from "@/components/Icons";
 import { FilterGroup, FilterCheck, SwatchCheck, FilterChip } from "@/components/Filters";
+import { COLOURS, CONDITIONS, PRICE_BANDS, SIZES } from "@/lib/catalog-ui";
 import {
-  CATEGORIES,
-  COLOURS,
-  CONDITIONS,
-  DESIGNERS,
-  PRICE_BANDS,
-  SIZES,
-  getCategory,
-} from "@/lib/catalog";
-import { byCategory, catalogQuery, type DbCatalogItem } from "@/lib/catalog-queries";
+  byCategory,
+  catalogMetadataQuery,
+  catalogQuery,
+  type DbCatalogItem,
+} from "@/lib/catalog-queries";
 
 type CatalogItem = DbCatalogItem;
 
 export const Route = createFileRoute("/shop/$category")({
   loader: async ({ params, context }) => {
-    const category = getCategory(params.category);
+    const metadata = await context.queryClient.ensureQueryData(catalogMetadataQuery);
+    const category = metadata.categories.find((item) => item.slug === params.category);
     if (!category) throw notFound();
     await context.queryClient.ensureQueryData(catalogQuery);
     return { slug: category.slug, name: category.name, standfirst: category.standfirst };
   },
   head: ({ loaderData }) => {
     if (!loaderData) {
-      return { meta: [{ title: "Unavailable — DesignerSale" }, { name: "robots", content: "noindex" }] };
+      return {
+        meta: [{ title: "Unavailable — DesignerSale" }, { name: "robots", content: "noindex" }],
+      };
     }
     const title = `${loaderData.name} — Curated Luxury | DesignerSale`;
     return {
@@ -72,7 +72,10 @@ function toggle(list: string[], value: string) {
 
 function CategoryPage() {
   const { category: slug } = Route.useParams();
-  const category = getCategory(slug)!;
+  const { data: metadata } = useSuspenseQuery(catalogMetadataQuery);
+  const category = metadata.categories.find((item) => item.slug === slug)!;
+  const CATEGORIES = metadata.categories;
+  const DESIGNERS = metadata.designers;
   const { data: all } = useSuspenseQuery(catalogQuery);
   const items = useMemo(() => byCategory(all, slug), [all, slug]);
 
@@ -247,7 +250,9 @@ function CategoryPage() {
                     to="/shop/$category"
                     params={{ category: c.slug }}
                     className={`link-underline text-[0.7rem] uppercase tracking-[0.18em] transition-colors duration-300 ${
-                      c.slug === slug ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+                      c.slug === slug
+                        ? "text-foreground"
+                        : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
                     {c.name}
@@ -361,7 +366,9 @@ function CategoryPage() {
                       />
                     </div>
                     <div className="flex flex-col justify-center px-7 py-12 md:px-14">
-                      <p className="rule-label text-muted-foreground">{category.editorial.eyebrow}</p>
+                      <p className="rule-label text-muted-foreground">
+                        {category.editorial.eyebrow}
+                      </p>
                       <h2 className="display mt-5 text-[clamp(2rem,3.6vw,3.25rem)]">
                         {category.editorial.title}
                       </h2>
@@ -378,7 +385,11 @@ function CategoryPage() {
                 {rest.length > 0 && (
                   <div className="grid grid-cols-2 gap-x-5 gap-y-14 pt-16 md:gap-x-8 lg:grid-cols-3">
                     {rest.map((p, i) => (
-                      <Reveal key={p.id} delay={(i % 3) * 70} className={i % 3 === 1 ? "lg:mt-10" : ""}>
+                      <Reveal
+                        key={p.id}
+                        delay={(i % 3) * 70}
+                        className={i % 3 === 1 ? "lg:mt-10" : ""}
+                      >
                         <Link to="/product/$id" params={{ id: p.id }}>
                           <ProductCard product={p} />
                         </Link>
@@ -398,7 +409,10 @@ function CategoryPage() {
                     />
                   </div>
                   {shown.length < filtered.length && (
-                    <button onClick={() => setVisible((v) => v + 8)} className="btn-ghost-luxe mt-2">
+                    <button
+                      onClick={() => setVisible((v) => v + 8)}
+                      className="btn-ghost-luxe mt-2"
+                    >
                       Load more <ArrowRight />
                     </button>
                   )}
@@ -449,6 +463,7 @@ function CategoryPage() {
 }
 
 function CategoryNotFound() {
+  const { data: metadata } = useSuspenseQuery(catalogMetadataQuery);
   return (
     <>
       <Nav />
@@ -459,7 +474,7 @@ function CategoryNotFound() {
           The category you were looking for is no longer live. Browse the current edits below.
         </p>
         <ul className="mt-10 flex flex-wrap justify-center gap-6">
-          {CATEGORIES.map((c) => (
+          {metadata.categories.map((c) => (
             <li key={c.slug}>
               <Link
                 to="/shop/$category"

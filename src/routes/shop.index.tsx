@@ -4,11 +4,14 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { Reveal } from "@/components/Reveal";
-import { CATEGORIES } from "@/lib/catalog";
-import { byCategory, catalogQuery } from "@/lib/catalog-queries";
+import { byCategory, catalogMetadataQuery, catalogQuery } from "@/lib/catalog-queries";
 
 export const Route = createFileRoute("/shop/")({
-  loader: ({ context }) => context.queryClient.ensureQueryData(catalogQuery),
+  loader: ({ context }) =>
+    Promise.all([
+      context.queryClient.ensureQueryData(catalogQuery),
+      context.queryClient.ensureQueryData(catalogMetadataQuery),
+    ]),
   errorComponent: ({ error }) => (
     <div className="flex min-h-screen items-center justify-center px-6 text-center" role="alert">
       <p className="text-sm text-muted-foreground">{error.message}</p>
@@ -36,6 +39,8 @@ export const Route = createFileRoute("/shop/")({
 
 function ShopIndex() {
   const { data: items } = useSuspenseQuery(catalogQuery);
+  const { data: metadata } = useSuspenseQuery(catalogMetadataQuery);
+  const CATEGORIES = metadata.categories;
 
   return (
     <>
@@ -53,7 +58,12 @@ function ShopIndex() {
             <Reveal key={c.slug} delay={i * 90} className={i % 2 === 1 ? "lg:mt-14" : ""}>
               <Link to="/shop/$category" params={{ category: c.slug }} className="group block">
                 <div className="img-zoom aspect-[3/4] bg-cream">
-                  <img src={c.image} alt={c.alt} loading="lazy" className="h-full w-full object-cover" />
+                  <img
+                    src={c.image}
+                    alt={c.alt}
+                    loading="lazy"
+                    className="h-full w-full object-cover"
+                  />
                 </div>
                 <p className="rule-label mt-5 text-muted-foreground">{c.kicker}</p>
                 <h2 className="display mt-2 text-3xl">{c.name}</h2>

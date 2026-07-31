@@ -22,6 +22,12 @@ function slugify(value: string) {
     .replace(/^-+|-+$/g, "")
     .slice(0, 80);
 }
+async function cleanupCloudinary(publicIds: Array<string | null | undefined>) {
+  const ids=publicIds.filter((id):id is string=>Boolean(id)&&!id!.includes("/seed/"));
+  if(!ids.length)return;
+  const {destroyCloudinaryImage}=await import("./cloudinary.server");
+  for(const id of ids)try{await destroyCloudinaryImage(id)}catch(error){console.error(`[Cloudinary] Cleanup failed for ${id}`,error)}
+}
 
 const uuid = z.string().uuid();
 const optText = z
@@ -43,7 +49,7 @@ export const adminGetRefs = createServerFn({ method: "GET" })
       sb.from("categories").select("id, name").order("name"),
       sb.from("colors").select("id, name").order("name"),
       sb.from("blog_categories").select("id, name").order("name"),
-      sb.from("products").select("id, name").order("name").limit(300),
+      sb.from("products").select("id, name, merchant_id").order("name").limit(300),
     ]);
     return {
       merchants: merchants.data ?? [],
@@ -68,7 +74,9 @@ const merchantInput = z.object({
   website_url: optText,
   instagram_url: optText,
   logo_url: optText,
+  logo_public_id: optText,
   cover_image_url: optText,
+  cover_image_public_id: optText,
   status: z.enum(["pending", "approved", "rejected", "suspended"]).default("approved"),
   is_active: z.boolean().default(true),
   is_featured: z.boolean().default(false),
@@ -94,8 +102,10 @@ export const adminEditMerchant = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context as Ctx);
     const { id, ...patch } = data;
+    const {data:old}=await context.supabase.from("merchants").select("logo_public_id,cover_image_public_id").eq("id",id).single();
     const { error } = await context.supabase.from("merchants").update(patch).eq("id", id);
     if (error) throw new Error(error.message);
+    await cleanupCloudinary([old?.logo_public_id!==patch.logo_public_id?old?.logo_public_id:null,old?.cover_image_public_id!==patch.cover_image_public_id?old?.cover_image_public_id:null]);
     return { ok: true };
   });
 
@@ -104,8 +114,10 @@ export const adminDeleteMerchant = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ id: uuid }).parse(d))
   .handler(async ({ data, context }) => {
     await assertAdmin(context as Ctx);
+    const {data:old}=await context.supabase.from("merchants").select("logo_public_id,cover_image_public_id").eq("id",data.id).single();
     const { error } = await context.supabase.from("merchants").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
+    await cleanupCloudinary([old?.logo_public_id,old?.cover_image_public_id]);
     return { ok: true };
   });
 
@@ -177,7 +189,7 @@ export const adminGetProduct = createServerFn({ method: "GET" })
     const { data: row, error } = await context.supabase
       .from("products")
       .select(
-        "*, product_images(id, image_url, is_primary, display_order), product_variants(id, name, sku, sizes, original_price, discounted_price, currency, stock_quantity, is_default, is_available, color_id)",
+        "*, product_images(id, image_url, image_public_id, is_primary, display_order), product_variants(id, name, sku, sizes, original_price, discounted_price, currency, stock_quantity, is_default, is_available, color_id)",
       )
       .eq("id", data.id)
       .maybeSingle();
@@ -238,7 +250,7 @@ export const adminDeleteVariant = createServerFn({ method: "POST" })
 export const adminAddProductImage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
-    z.object({ product_id: uuid, image_url: z.string().trim().url(), is_primary: z.boolean().default(false) }).parse(d),
+    z.object({ product_id: uuid, image_url: z.string().trim().url(), image_public_id: z.string().trim().min(1), is_primary: z.boolean().default(false) }).parse(d),
   )
   .handler(async ({ data, context }) => {
     await assertAdmin(context as Ctx);
@@ -252,8 +264,21 @@ export const adminDeleteProductImage = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ id: uuid }).parse(d))
   .handler(async ({ data, context }) => {
     await assertAdmin(context as Ctx);
+    const { data: image } = await context.supabase
+      .from("product_images")
+      .select("image_public_id")
+      .eq("id", data.id)
+      .single();
     const { error } = await context.supabase.from("product_images").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
+    if (image?.image_public_id && !image.image_public_id.includes("/seed/")) {
+      try {
+        const { destroyCloudinaryImage } = await import("./cloudinary.server");
+        await destroyCloudinaryImage(image.image_public_id);
+      } catch (cleanupError) {
+        console.error("[Cloudinary] Product image cleanup failed", cleanupError);
+      }
+    }
     return { ok: true };
   });
 
@@ -264,10 +289,14 @@ const saleInput = z.object({
   description: optText,
   merchant_id: z.union([uuid, z.literal("")]).optional().transform((v) => (v ? v : null)),
   banner_image_url: optText,
+  banner_image_public_id: optText,
+  mobile_banner_image_url: optText,
+  mobile_banner_image_public_id: optText,
   starts_at: optText,
   ends_at: optText,
   is_active: z.boolean().default(true),
   is_featured: z.boolean().default(false),
+  product_ids: z.array(uuid).optional(),
 });
 
 export const adminListSales = createServerFn({ method: "GET" })
@@ -276,7 +305,7 @@ export const adminListSales = createServerFn({ method: "GET" })
     await assertAdmin(context as Ctx);
     const { data, error } = await context.supabase
       .from("sales")
-      .select("id, name, slug, description, merchant_id, banner_image_url, starts_at, ends_at, is_active, is_featured, merchants(name)")
+      .select("id, name, slug, description, merchant_id, banner_image_url, banner_image_public_id, mobile_banner_image_url, mobile_banner_image_public_id, starts_at, ends_at, is_active, is_featured, merchants(name), sale_variants(variant_id, product_variants(product_id))")
       .order("created_at", { ascending: false })
       .limit(200);
     if (error) throw new Error(error.message);
@@ -288,10 +317,31 @@ export const adminCreateSale = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => saleInput.parse(d))
   .handler(async ({ data, context }) => {
     await assertAdmin(context as Ctx);
-    const { error } = await context.supabase
+    const { product_ids, ...saleData } = data;
+    const { data: sale, error } = await context.supabase
       .from("sales")
-      .insert({ ...data, slug: `${slugify(data.name)}-${Math.random().toString(36).slice(2, 6)}` });
+      .insert({ ...saleData, slug: `${slugify(saleData.name)}-${Math.random().toString(36).slice(2, 6)}` })
+      .select("id")
+      .single();
     if (error) throw new Error(error.message);
+
+    if (product_ids && product_ids.length > 0) {
+      const { data: variants, error: vError } = await context.supabase
+        .from("product_variants")
+        .select("id")
+        .in("product_id", product_ids);
+      if (vError) throw new Error(vError.message);
+
+      if (variants && variants.length > 0) {
+        const rows = variants.map((v: any, index: number) => ({
+          sale_id: sale.id,
+          variant_id: v.id,
+          display_order: index,
+        }));
+        const { error: svError } = await context.supabase.from("sale_variants").insert(rows);
+        if (svError) throw new Error(svError.message);
+      }
+    }
     return { ok: true };
   });
 
@@ -300,9 +350,34 @@ export const adminEditSale = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => saleInput.partial().extend({ id: uuid }).parse(d))
   .handler(async ({ data, context }) => {
     await assertAdmin(context as Ctx);
-    const { id, ...patch } = data;
+    const { id, product_ids, ...patch } = data;
+    const { data: old } = await context.supabase.from("sales").select("banner_image_public_id,mobile_banner_image_public_id").eq("id", id).single();
     const { error } = await context.supabase.from("sales").update(patch).eq("id", id);
     if (error) throw new Error(error.message);
+    await cleanupCloudinary([old?.banner_image_public_id !== patch.banner_image_public_id ? old?.banner_image_public_id : null, old?.mobile_banner_image_public_id !== patch.mobile_banner_image_public_id ? old?.mobile_banner_image_public_id : null]);
+
+    if (product_ids !== undefined) {
+      const { error: delError } = await context.supabase.from("sale_variants").delete().eq("sale_id", id);
+      if (delError) throw new Error(delError.message);
+
+      if (product_ids.length > 0) {
+        const { data: variants, error: vError } = await context.supabase
+          .from("product_variants")
+          .select("id")
+          .in("product_id", product_ids);
+        if (vError) throw new Error(vError.message);
+
+        if (variants && variants.length > 0) {
+          const rows = variants.map((v: any, index: number) => ({
+            sale_id: id,
+            variant_id: v.id,
+            display_order: index,
+          }));
+          const { error: svError } = await context.supabase.from("sale_variants").insert(rows);
+          if (svError) throw new Error(svError.message);
+        }
+      }
+    }
     return { ok: true };
   });
 
@@ -311,8 +386,10 @@ export const adminDeleteSale = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ id: uuid }).parse(d))
   .handler(async ({ data, context }) => {
     await assertAdmin(context as Ctx);
+    const {data:old}=await context.supabase.from("sales").select("banner_image_public_id,mobile_banner_image_public_id").eq("id",data.id).single();
     const { error } = await context.supabase.from("sales").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
+    await cleanupCloudinary([old?.banner_image_public_id,old?.mobile_banner_image_public_id]);
     return { ok: true };
   });
 
@@ -324,6 +401,7 @@ const postInput = z.object({
   content: z.string().trim().min(1),
   category_id: z.union([uuid, z.literal("")]).optional().transform((v) => (v ? v : null)),
   featured_image_url: optText,
+  featured_image_public_id: optText,
   status: z.enum(["draft", "published", "archived"]).default("draft"),
   is_featured: z.boolean().default(false),
 });
@@ -334,7 +412,7 @@ export const adminListBlogPosts = createServerFn({ method: "GET" })
     await assertAdmin(context as Ctx);
     const { data, error } = await context.supabase
       .from("blog_posts")
-      .select("id, title, slug, excerpt, content, status, is_featured, featured_image_url, category_id, published_at, created_at, blog_categories(name)")
+      .select("id, title, slug, excerpt, content, status, is_featured, featured_image_url, featured_image_public_id, category_id, published_at, created_at, blog_categories(name)")
       .order("created_at", { ascending: false })
       .limit(200);
     if (error) throw new Error(error.message);
@@ -362,12 +440,14 @@ export const adminEditBlogPost = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context as Ctx);
     const { id, ...patch } = data;
+    const {data:old}=await context.supabase.from("blog_posts").select("featured_image_public_id").eq("id",id).single();
     const next = {
       ...patch,
       ...(patch.status === "published" ? { published_at: new Date().toISOString() } : {}),
     };
     const { error } = await context.supabase.from("blog_posts").update(next).eq("id", id);
     if (error) throw new Error(error.message);
+    await cleanupCloudinary([old?.featured_image_public_id!==patch.featured_image_public_id?old?.featured_image_public_id:null]);
     return { ok: true };
   });
 
@@ -376,8 +456,10 @@ export const adminDeleteBlogPost = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ id: uuid }).parse(d))
   .handler(async ({ data, context }) => {
     await assertAdmin(context as Ctx);
+    const {data:old}=await context.supabase.from("blog_posts").select("featured_image_public_id").eq("id",data.id).single();
     const { error } = await context.supabase.from("blog_posts").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
+    await cleanupCloudinary([old?.featured_image_public_id]);
     return { ok: true };
   });
 

@@ -1002,3 +1002,33 @@ cd <repository-name>
 npm i
 npm run dev
 ```
+# Cloudinary and catalog seeding
+
+Production images are delivered by Cloudinary. Copy `.env.example` to `.env` and configure the
+Supabase server credentials plus `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`,
+`CLOUDINARY_API_SECRET`, and optionally `CLOUDINARY_UPLOAD_FOLDER`.
+
+Never expose `SUPABASE_SERVICE_ROLE_KEY` or `CLOUDINARY_API_SECRET` through a `VITE_` variable or
+commit real credentials.
+
+The seed uses the existing application content in `scripts/seed-data`:
+
+```bash
+npm run seed:dry-run
+npm run seed
+npm run seed:skip-images
+```
+
+The normal seed is idempotent and resolves relationships through slugs and SKUs. Seed images use
+deterministic IDs below `designer-sales/seed/`; repeat runs overwrite/reuse those assets.
+`seed:skip-images` leaves image columns unchanged and is intended for data-only updates.
+
+Reset deletes only catalog records named by the seed data:
+
+```bash
+ALLOW_DESTRUCTIVE_SEED=true npm run seed:reset
+```
+
+Production reset additionally requires `ALLOW_PRODUCTION_SEED_RESET=true`. User accounts, profiles,
+orders, carts, and wishlists are never reset. Missing local files, invalid relationships, duplicate
+SKUs, invalid prices, and Cloudinary errors are reported with their entity labels.

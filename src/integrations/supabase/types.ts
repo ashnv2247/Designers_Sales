@@ -106,6 +106,7 @@ export type Database = {
       }
       blog_posts: {
         Row: {
+          featured_image_public_id: string | null
           author_id: string | null
           category_id: string | null
           content: string
@@ -123,6 +124,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          featured_image_public_id?: string | null
           author_id?: string | null
           category_id?: string | null
           content: string
@@ -140,6 +142,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          featured_image_public_id?: string | null
           author_id?: string | null
           category_id?: string | null
           content?: string
@@ -196,6 +199,8 @@ export type Database = {
       }
       brands: {
         Row: {
+          cover_image_public_id: string | null
+          logo_public_id: string | null
           country: string | null
           cover_image_url: string | null
           created_at: string
@@ -210,6 +215,8 @@ export type Database = {
           website_url: string | null
         }
         Insert: {
+          cover_image_public_id?: string | null
+          logo_public_id?: string | null
           country?: string | null
           cover_image_url?: string | null
           created_at?: string
@@ -224,6 +231,8 @@ export type Database = {
           website_url?: string | null
         }
         Update: {
+          cover_image_public_id?: string | null
+          logo_public_id?: string | null
           country?: string | null
           cover_image_url?: string | null
           created_at?: string
@@ -327,6 +336,8 @@ export type Database = {
       }
       categories: {
         Row: {
+          image_public_id: string | null
+          metadata: Json | null
           created_at: string
           description: string | null
           display_order: number
@@ -339,6 +350,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          image_public_id?: string | null
+          metadata?: Json | null
           created_at?: string
           description?: string | null
           display_order?: number
@@ -351,6 +364,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          image_public_id?: string | null
+          metadata?: Json | null
           created_at?: string
           description?: string | null
           display_order?: number
@@ -398,6 +413,8 @@ export type Database = {
       }
       curated_pages: {
         Row: {
+          hero_image_public_id: string | null
+          mobile_hero_image_public_id: string | null
           created_at: string
           description: string | null
           hero_image_url: string | null
@@ -413,6 +430,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          hero_image_public_id?: string | null
+          mobile_hero_image_public_id?: string | null
           created_at?: string
           description?: string | null
           hero_image_url?: string | null
@@ -428,6 +447,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          hero_image_public_id?: string | null
+          mobile_hero_image_public_id?: string | null
           created_at?: string
           description?: string | null
           hero_image_url?: string | null
@@ -479,6 +500,7 @@ export type Database = {
       }
       curated_section_categories: {
         Row: {
+          custom_image_public_id: string | null
           category_id: string
           custom_image_url: string | null
           custom_title: string | null
@@ -486,6 +508,7 @@ export type Database = {
           section_id: string
         }
         Insert: {
+          custom_image_public_id?: string | null
           category_id: string
           custom_image_url?: string | null
           custom_title?: string | null
@@ -493,6 +516,7 @@ export type Database = {
           section_id: string
         }
         Update: {
+          custom_image_public_id?: string | null
           category_id?: string
           custom_image_url?: string | null
           custom_title?: string | null
@@ -617,6 +641,9 @@ export type Database = {
       }
       curated_sections: {
         Row: {
+          image_public_id: string | null
+          mobile_image_public_id: string | null
+          settings: Json | null
           content: string | null
           created_at: string
           curated_page_id: string
@@ -633,6 +660,9 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          image_public_id?: string | null
+          mobile_image_public_id?: string | null
+          settings?: Json | null
           content?: string | null
           created_at?: string
           curated_page_id: string
@@ -649,6 +679,9 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          image_public_id?: string | null
+          mobile_image_public_id?: string | null
+          settings?: Json | null
           content?: string | null
           created_at?: string
           curated_page_id?: string
@@ -697,6 +730,8 @@ export type Database = {
       }
       merchants: {
         Row: {
+          cover_image_public_id: string | null
+          logo_public_id: string | null
           city: string | null
           country: string | null
           cover_image_url: string | null
@@ -718,6 +753,8 @@ export type Database = {
           website_url: string | null
         }
         Insert: {
+          cover_image_public_id?: string | null
+          logo_public_id?: string | null
           city?: string | null
           country?: string | null
           cover_image_url?: string | null
@@ -739,6 +776,8 @@ export type Database = {
           website_url?: string | null
         }
         Update: {
+          cover_image_public_id?: string | null
+          logo_public_id?: string | null
           city?: string | null
           country?: string | null
           cover_image_url?: string | null
@@ -884,6 +923,7 @@ export type Database = {
       }
       product_images: {
         Row: {
+          image_public_id: string | null
           alt_text: string | null
           created_at: string
           display_order: number
@@ -893,6 +933,7 @@ export type Database = {
           product_id: string
         }
         Insert: {
+          image_public_id?: string | null
           alt_text?: string | null
           created_at?: string
           display_order?: number
@@ -902,6 +943,7 @@ export type Database = {
           product_id: string
         }
         Update: {
+          image_public_id?: string | null
           alt_text?: string | null
           created_at?: string
           display_order?: number
@@ -1029,6 +1071,7 @@ export type Database = {
       }
       product_types: {
         Row: {
+          image_public_id: string | null
           category_id: string | null
           created_at: string
           description: string | null
@@ -1041,6 +1084,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          image_public_id?: string | null
           category_id?: string | null
           created_at?: string
           description?: string | null
@@ -1053,6 +1097,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          image_public_id?: string | null
           category_id?: string | null
           created_at?: string
           description?: string | null
@@ -1076,6 +1121,7 @@ export type Database = {
       }
       product_variant_images: {
         Row: {
+          image_public_id: string | null
           alt_text: string | null
           created_at: string
           display_order: number
@@ -1085,6 +1131,7 @@ export type Database = {
           variant_id: string
         }
         Insert: {
+          image_public_id?: string | null
           alt_text?: string | null
           created_at?: string
           display_order?: number
@@ -1094,6 +1141,7 @@ export type Database = {
           variant_id: string
         }
         Update: {
+          image_public_id?: string | null
           alt_text?: string | null
           created_at?: string
           display_order?: number
@@ -1366,8 +1414,43 @@ export type Database = {
           },
         ]
       }
+      site_assets: {
+        Row: {
+          alt_text: string | null
+          asset_key: string
+          created_at: string
+          id: string
+          image_public_id: string
+          image_url: string
+          metadata: Json | null
+          updated_at: string
+        }
+        Insert: {
+          alt_text?: string | null
+          asset_key: string
+          created_at?: string
+          id?: string
+          image_public_id: string
+          image_url: string
+          metadata?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          alt_text?: string | null
+          asset_key?: string
+          created_at?: string
+          id?: string
+          image_public_id?: string
+          image_url?: string
+          metadata?: Json | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       sales: {
         Row: {
+          banner_image_public_id: string | null
+          mobile_banner_image_public_id: string | null
           banner_image_url: string | null
           created_at: string
           description: string | null
@@ -1383,6 +1466,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          banner_image_public_id?: string | null
+          mobile_banner_image_public_id?: string | null
           banner_image_url?: string | null
           created_at?: string
           description?: string | null
@@ -1398,6 +1483,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          banner_image_public_id?: string | null
+          mobile_banner_image_public_id?: string | null
           banner_image_url?: string | null
           created_at?: string
           description?: string | null
@@ -1669,6 +1756,22 @@ export type Database = {
         Returns: boolean
       }
       is_staff: { Args: { _user_id: string }; Returns: boolean }
+      duplicate_curated_page: {
+        Args: { _page_id: string }
+        Returns: string
+      }
+      duplicate_curated_section: {
+        Args: { _section_id: string }
+        Returns: string
+      }
+      reorder_curated_items: {
+        Args: { _kind: string; _ordered_ids: string[]; _section_id: string }
+        Returns: undefined
+      }
+      reorder_curated_sections: {
+        Args: { _ordered_ids: string[]; _page_id: string }
+        Returns: undefined
+      }
       owns_cart: {
         Args: { _cart_id: string; _user_id: string }
         Returns: boolean

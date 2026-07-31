@@ -132,7 +132,7 @@ export const adminListMerchants = createServerFn({ method: "GET" })
     await assertAdmin(context as Ctx);
     const { data, error } = await context.supabase
       .from("merchants")
-      .select("id, name, slug, city, country, email, status, is_active, is_featured, created_at")
+      .select("id, name, slug, city, country, email, phone, website_url, instagram_url, short_description, description, logo_url, logo_public_id, cover_image_url, cover_image_public_id, status, is_active, is_featured, created_at")
       .order("created_at", { ascending: false })
       .limit(200);
     if (error) throw new Error(error.message);

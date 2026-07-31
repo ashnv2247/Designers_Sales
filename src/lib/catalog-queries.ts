@@ -1,6 +1,14 @@
 import { queryOptions } from "@tanstack/react-query";
 
-import { getCatalog, getMerchantDirectory, type DbCatalogItem } from "@/lib/catalog.functions";
+import {
+  getCatalog,
+  getCatalogMetadata,
+  getHomepageContent,
+  getMerchantDirectory,
+  getSiteAsset,
+  listPublicCuratedPages,
+  type DbCatalogItem,
+} from "@/lib/catalog.functions";
 
 export const catalogQuery = queryOptions({
   queryKey: ["catalog"],
@@ -12,6 +20,23 @@ export const merchantDirectoryQuery = queryOptions({
   queryKey: ["merchant-directory"],
   queryFn: () => getMerchantDirectory(),
   staleTime: 5 * 60 * 1000,
+});
+
+export const homepageQuery = queryOptions({
+  queryKey: ["homepage-content"],
+  queryFn: () => getHomepageContent(),
+});
+export const catalogMetadataQuery = queryOptions({
+  queryKey: ["catalog-metadata"],
+  queryFn: () => getCatalogMetadata(),
+});
+
+export const siteAssetQuery = (key: string) =>
+  queryOptions({ queryKey: ["site-asset", key], queryFn: () => getSiteAsset({ data: key }) });
+
+export const publicCuratedPagesQuery = queryOptions({
+  queryKey: ["public-curated-pages"],
+  queryFn: () => listPublicCuratedPages(),
 });
 
 export const byCategory = (items: DbCatalogItem[], slug: string) =>

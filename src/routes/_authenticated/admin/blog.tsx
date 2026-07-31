@@ -13,6 +13,7 @@ import {
   adminGetRefs,
   adminListBlogPosts,
 } from "@/lib/admin-content.functions";
+import { CloudinaryImageUploader } from "@/components/admin/CloudinaryImageUploader";
 
 const STATUSES = ["draft", "published", "archived"] as const;
 
@@ -20,7 +21,10 @@ export const Route = createFileRoute("/_authenticated/admin/blog")({
   head: () => ({
     meta: [
       { title: "Admin Journal | DesignerSale" },
-      { name: "description", content: "Write, publish and archive editorial stories on the DesignerSale journal." },
+      {
+        name: "description",
+        content: "Write, publish and archive editorial stories on the DesignerSale journal.",
+      },
       { property: "og:title", content: "Admin Journal | DesignerSale" },
       { property: "og:description", content: "Manage DesignerSale journal stories." },
       { property: "og:type", content: "website" },
@@ -43,6 +47,10 @@ function PostForm({
   pending: boolean;
   submitLabel: string;
 }) {
+  const [featured, setFeatured] = useState({
+    url: post?.featured_image_url ?? "",
+    publicId: post?.featured_image_public_id ?? "",
+  });
   return (
     <form
       className="grid gap-5 md:grid-cols-2"
@@ -55,6 +63,7 @@ function PostForm({
           content: String(f.get("content")),
           category_id: String(f.get("category_id") ?? ""),
           featured_image_url: String(f.get("featured_image_url") ?? ""),
+          featured_image_public_id: String(f.get("featured_image_public_id") ?? ""),
           status: String(f.get("status")),
           is_featured: f.get("is_featured") === "on",
         });
@@ -82,9 +91,17 @@ function PostForm({
           ))}
         </SelectInput>
       </Field>
-      <Field label="Featured image URL">
-        <TextInput name="featured_image_url" defaultValue={post?.featured_image_url ?? ""} />
-      </Field>
+      <div>
+        <CloudinaryImageUploader
+          label="Featured image"
+          folder="blog"
+          value={featured.url}
+          publicId={featured.publicId}
+          onChange={(v) => setFeatured({ url: v?.url ?? "", publicId: v?.publicId ?? "" })}
+        />
+        <input type="hidden" name="featured_image_url" value={featured.url} />
+        <input type="hidden" name="featured_image_public_id" value={featured.publicId} />
+      </div>
       <div className="md:col-span-2">
         <Field label="Excerpt">
           <TextInput name="excerpt" defaultValue={post?.excerpt ?? ""} />
@@ -103,7 +120,8 @@ function PostForm({
       </div>
       <div className="flex items-center gap-6 md:col-span-2">
         <label className="flex items-center gap-2 text-[0.62rem] uppercase tracking-[0.18em] text-muted-foreground">
-          <input type="checkbox" name="is_featured" defaultChecked={Boolean(post?.is_featured)} /> Featured
+          <input type="checkbox" name="is_featured" defaultChecked={Boolean(post?.is_featured)} />{" "}
+          Featured
         </label>
       </div>
       <div className="md:col-span-2">
@@ -127,7 +145,10 @@ function AdminBlog() {
   const [openId, setOpenId] = useState<string | null>(null);
   const [newCategory, setNewCategory] = useState("");
 
-  const { data, isPending, error } = useQuery({ queryKey: ["admin-posts"], queryFn: () => list({}) });
+  const { data, isPending, error } = useQuery({
+    queryKey: ["admin-posts"],
+    queryFn: () => list({}),
+  });
   const { data: refs } = useQuery({ queryKey: ["admin-refs"], queryFn: () => getRefs({}) });
   const categories = ((refs as any)?.blogCategories ?? []) as any[];
 
@@ -173,7 +194,8 @@ function AdminBlog() {
   });
 
   if (isPending) return <p className="text-sm text-muted-foreground">Loading journal…</p>;
-  if (error || !data) return <p className="text-sm text-muted-foreground">We couldn't load the journal.</p>;
+  if (error || !data)
+    return <p className="text-sm text-muted-foreground">We couldn't load the journal.</p>;
 
   return (
     <>
@@ -207,7 +229,9 @@ function AdminBlog() {
         </Panel>
       )}
 
-      {(data as any[]).length === 0 && <p className="text-sm text-muted-foreground">No stories yet.</p>}
+      {(data as any[]).length === 0 && (
+        <p className="text-sm text-muted-foreground">No stories yet.</p>
+      )}
 
       <ul className="border-t border-border">
         {(data as any[]).map((p) => (

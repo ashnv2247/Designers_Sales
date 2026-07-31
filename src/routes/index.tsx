@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -6,28 +7,9 @@ import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { Reveal } from "@/components/Reveal";
 import { ProductCard } from "@/components/ProductCard";
-import { byCategory, catalogQuery } from "@/lib/catalog-queries";
+import { byCategory, catalogQuery, homepageQuery, publicCuratedPagesQuery } from "@/lib/catalog-queries";
 import { ArrowRight } from "@/components/Icons";
-
-import heroOlive from "@/assets/hero-olive.jpg";
-import heroBlack from "@/assets/hero-black.jpg";
-import heroSand from "@/assets/hero-sand.jpg";
-import heroNavy from "@/assets/hero-navy.jpg";
-import heroBurgundy from "@/assets/hero-burgundy.jpg";
-import heroTerracotta from "@/assets/hero-terracotta.jpg";
-import heroSlate from "@/assets/hero-slate.jpg";
-import heroPlum from "@/assets/hero-plum.jpg";
-import catDresses from "@/assets/cat-dresses.jpg";
-import catOuterwear from "@/assets/cat-outerwear.jpg";
-import catBags from "@/assets/cat-bags.jpg";
-import catJewellery from "@/assets/cat-jewellery.jpg";
-import boutique1 from "@/assets/boutique-1.jpg";
-import boutique2 from "@/assets/boutique-2.jpg";
-import designer from "@/assets/designer.jpg";
-import designer2 from "@/assets/designer-2.jpg";
-import designer3 from "@/assets/designer-3.jpg";
-import designer4 from "@/assets/designer-4.jpg";
-import designer5 from "@/assets/designer-5.jpg";
+import { getCloudinaryImageUrl } from "@/lib/cloudinary-images";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -48,175 +30,15 @@ export const Route = createFileRoute("/")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  loader: ({ context }) => context.queryClient.ensureQueryData(catalogQuery),
+  loader: async ({ context }) => {
+    await Promise.all([
+      context.queryClient.ensureQueryData(catalogQuery),
+      context.queryClient.ensureQueryData(homepageQuery),
+      context.queryClient.ensureQueryData(publicCuratedPagesQuery),
+    ]);
+  },
   component: Home,
 });
-
-const SLIDES = [
-  {
-    id: "olive",
-    image: heroOlive,
-    alt: "Model in a cream silk suit against an olive green wall with leaf shadows",
-    kicker: "Issue 07 — The Winter Edit",
-    lines: ["Where Fashion", "Becomes", "Art."],
-    caption: "Silk, Stone & Light",
-    campaign: "Campaign 07",
-    bg: "oklch(0.265 0.036 126)",
-    glow: "oklch(0.335 0.044 124)",
-    accent: "oklch(0.78 0.09 92)",
-  },
-  {
-    id: "black",
-    image: heroBlack,
-    alt: "Model in a long black tailored coat lit from one side against black",
-    kicker: "Issue 08 — After Dark",
-    lines: ["Tailoring", "Cut for the", "Night."],
-    caption: "The Black Coat",
-    campaign: "Campaign 08",
-    bg: "oklch(0.145 0.004 250)",
-    glow: "oklch(0.26 0.012 250)",
-    accent: "oklch(0.82 0.07 88)",
-  },
-  {
-    id: "sand",
-    image: heroSand,
-    alt: "Model in an ivory wool coat against a warm sand backdrop",
-    kicker: "The Cashmere Rooms",
-    lines: ["Quiet Cloth,", "Long", "Winters."],
-    caption: "Ivory & Camel",
-    campaign: "Campaign 09",
-    bg: "oklch(0.30 0.028 68)",
-    glow: "oklch(0.44 0.038 70)",
-    accent: "oklch(0.86 0.05 82)",
-  },
-  {
-    id: "navy",
-    image: heroNavy,
-    alt: "Model in a navy trench coat against a midnight blue backdrop",
-    kicker: "Outerwear Archive",
-    lines: ["A Coat", "Outlives the", "Season."],
-    caption: "Midnight Trench",
-    campaign: "Campaign 10",
-    bg: "oklch(0.22 0.048 258)",
-    glow: "oklch(0.33 0.062 256)",
-    accent: "oklch(0.84 0.06 86)",
-  },
-  {
-    id: "burgundy",
-    image: heroBurgundy,
-    alt: "Model in a burgundy velvet coat against an oxblood backdrop",
-    kicker: "Evening — Chapter Two",
-    lines: ["Velvet, Held", "Against the", "Dark."],
-    caption: "Oxblood Velvet",
-    campaign: "Campaign 11",
-    bg: "oklch(0.23 0.062 16)",
-    glow: "oklch(0.34 0.088 18)",
-    accent: "oklch(0.85 0.06 78)",
-  },
-  {
-    id: "terracotta",
-    image: heroTerracotta,
-    alt: "Model in a champagne slip dress and gold jewellery against a terracotta wall",
-    kicker: "Fine Jewellery",
-    lines: ["Gold Kept", "Close to the", "Skin."],
-    caption: "Clay & Carat",
-    campaign: "Campaign 12",
-    bg: "oklch(0.32 0.078 42)",
-    glow: "oklch(0.46 0.11 44)",
-    accent: "oklch(0.90 0.06 80)",
-  },
-  {
-    id: "slate",
-    image: heroSlate,
-    alt: "Model in a grey checked suit against a slate grey studio backdrop",
-    kicker: "The Suiting Room",
-    lines: ["Precision,", "Softly", "Worn."],
-    caption: "Slate Tailoring",
-    campaign: "Campaign 13",
-    bg: "oklch(0.27 0.014 250)",
-    glow: "oklch(0.40 0.020 250)",
-    accent: "oklch(0.86 0.04 90)",
-  },
-  {
-    id: "plum",
-    image: heroPlum,
-    alt: "Model in a plum silk gown against a deep aubergine backdrop",
-    kicker: "Gowns — The Archive",
-    lines: ["Silk That", "Moves Like", "Water."],
-    caption: "Aubergine Silk",
-    campaign: "Campaign 14",
-    bg: "oklch(0.25 0.088 330)",
-    glow: "oklch(0.38 0.13 328)",
-    accent: "oklch(0.88 0.06 84)",
-  },
-];
-
-const CATEGORIES = [
-  { slug: "dresses", name: "Dresses", count: "412 pieces", image: catDresses, alt: "Champagne silk slip dress" },
-  { slug: "outerwear", name: "Outerwear", count: "268 pieces", image: catOuterwear, alt: "Tailored charcoal wool coat" },
-  { slug: "bags", name: "Bags", count: "197 pieces", image: catBags, alt: "Tan leather handbag on a stone plinth" },
-  { slug: "jewellery", name: "Fine Jewellery", count: "146 pieces", image: catJewellery, alt: "Fine gold chain necklace on ivory silk" },
-];
-
-const DESIGNERS = [
-  {
-    id: "marchetti",
-    name: "Elène Marchetti",
-    image: designer,
-    alt: "Black and white portrait of designer Elène Marchetti",
-    bio: "Twenty-two years between Milan and Melbourne. Marchetti cuts on the bias, dyes in small lots, and refuses a season calendar. The result is a wardrobe that behaves like an heirloom rather than a trend.",
-    stats: [["Since", "2003"], ["Atelier", "Fitzroy"], ["Pieces", "38"]] as [string, string][],
-    bg: "oklch(0.265 0.036 126)",
-    accent: "oklch(0.78 0.09 92)",
-  },
-  {
-    id: "aoki",
-    name: "Mieko Aoki",
-    image: designer2,
-    alt: "Black and white portrait of designer Mieko Aoki in a linen atelier",
-    bio: "Aoki works only in undyed linen and paper-thin wool, folding rather than seaming. Each garment is drafted from a single length of cloth — nothing cut away, nothing wasted.",
-    stats: [["Since", "1998"], ["Atelier", "Kyoto"], ["Pieces", "24"]] as [string, string][],
-    bg: "oklch(0.30 0.028 68)",
-    accent: "oklch(0.88 0.05 82)",
-  },
-  {
-    id: "okoro",
-    name: "Julien Okoro",
-    image: designer3,
-    alt: "Black and white portrait of tailor Julien Okoro holding fabric shears",
-    bio: "A Savile Row apprenticeship rebuilt for Melbourne heat. Okoro drafts unstructured tailoring in half-canvas, then finishes every buttonhole by hand in the Collingwood studio.",
-    stats: [["Since", "2014"], ["Atelier", "Collingwood"], ["Pieces", "51"]] as [string, string][],
-    bg: "oklch(0.185 0.006 250)",
-    accent: "oklch(0.84 0.07 88)",
-  },
-  {
-    id: "lindqvist",
-    name: "Ilse Lindqvist",
-    image: designer4,
-    alt: "Black and white portrait of jewellery designer Ilse Lindqvist at a workbench",
-    bio: "Recycled gold, rough-set stones, no polish where a thumb will wear one anyway. Lindqvist makes fine jewellery meant to be lived in rather than kept in a box.",
-    stats: [["Since", "2011"], ["Atelier", "Hobart"], ["Pieces", "66"]] as [string, string][],
-    bg: "oklch(0.24 0.048 258)",
-    accent: "oklch(0.86 0.06 86)",
-  },
-  {
-    id: "rao",
-    name: "Priya Rao",
-    image: designer5,
-    alt: "Black and white portrait of textile designer Priya Rao in a dye studio",
-    bio: "Rao dyes with madder, indigo and pomegranate rind in open vats, so no two lengths of silk ever repeat. The colour is the collection; the cut simply carries it.",
-    stats: [["Since", "2008"], ["Atelier", "Jaipur"], ["Pieces", "43"]] as [string, string][],
-    bg: "oklch(0.25 0.072 22)",
-    accent: "oklch(0.87 0.07 62)",
-  },
-];
-
-const STATS = [
-  { value: 142, suffix: "", label: "Boutiques" },
-  { value: 1876, suffix: "", label: "Pieces live" },
-  { value: 62, suffix: "%", label: "Average reduction" },
-  { value: 48, suffix: "h", label: "Delivery, nationwide" },
-];
 
 function Counter({ value, suffix }: { value: number; suffix: string }) {
   const ref = useRef<HTMLSpanElement>(null);
@@ -250,6 +72,14 @@ function Counter({ value, suffix }: { value: number; suffix: string }) {
 
 function Home() {
   const { data: catalogItems } = useSuspenseQuery(catalogQuery);
+  const { data: homepage } = useSuspenseQuery(homepageQuery);
+  const { data: curatedPages } = useSuspenseQuery(publicCuratedPagesQuery);
+  const SLIDES = homepage.slides;
+  const CATEGORIES = homepage.categories;
+  const DESIGNERS = homepage.designers;
+  const STATS = homepage.stats;
+  const boutique1 = homepage.assets["boutique-editorial-1"];
+  const boutique2 = homepage.assets["boutique-editorial-2"];
   const mostWanted = useMemo(
     () =>
       [
@@ -264,9 +94,9 @@ function Home() {
   const [loaded, setLoaded] = useState(false);
   const [slide, setSlide] = useState(0);
   const [paused, setPaused] = useState(false);
-  const active = SLIDES[slide];
+  const active = SLIDES[slide] ?? SLIDES[0];
   const [designerIdx, setDesignerIdx] = useState(0);
-  const activeDesigner = DESIGNERS[designerIdx];
+  const activeDesigner = DESIGNERS[designerIdx] ?? DESIGNERS[0];
 
   useEffect(() => {
     setLoaded(true);
@@ -279,7 +109,7 @@ function Home() {
     if (paused) return;
     const t = setInterval(() => setSlide((s) => (s + 1) % SLIDES.length), 6000);
     return () => clearInterval(t);
-  }, [paused]);
+  }, [paused, SLIDES.length]);
 
   const next = () => setSlide((s) => (s + 1) % SLIDES.length);
   const prev = () => setSlide((s) => (s - 1 + SLIDES.length) % SLIDES.length);
@@ -314,7 +144,7 @@ function Home() {
               </p>
 
               <h1 key={active.id} className="display mt-7 text-[clamp(2.9rem,6.2vw,5.6rem)]">
-                {active.lines.map((line, i) => (
+                {active.lines.map((line: string, i: number) => (
                   <span key={line + i} className="block overflow-hidden">
                     <span
                       style={{
@@ -380,10 +210,10 @@ function Home() {
                   transform: `translateY(${scrolled * 0.04}px)`,
                 }}
               >
-                {SLIDES.map((s, i) => (
+                {SLIDES.map((s: any, i: number) => (
                   <img
                     key={s.id}
-                    src={s.image}
+                    src={getCloudinaryImageUrl(s.image, "banner")}
                     alt={s.alt}
                     width={1200}
                     height={1500}
@@ -424,7 +254,7 @@ function Home() {
 
               {/* slide index */}
               <div className="absolute -left-10 top-1/2 hidden -translate-y-1/2 flex-col items-center gap-3 text-[0.65rem] tracking-[0.2em] xl:flex">
-                {SLIDES.map((s, i) => (
+                {SLIDES.map((s: any, i: number) => (
                   <button
                     key={s.id}
                     type="button"
@@ -432,7 +262,12 @@ function Home() {
                     aria-label={`Show campaign ${i + 1}`}
                     aria-current={i === slide}
                     className="transition-colors duration-300"
-                    style={{ color: i === slide ? "var(--slide-accent)" : "color-mix(in oklab, var(--ivory) 35%, transparent)" }}
+                    style={{
+                      color:
+                        i === slide
+                          ? "var(--slide-accent)"
+                          : "color-mix(in oklab, var(--ivory) 35%, transparent)",
+                    }}
                   >
                     {String(i + 1).padStart(2, "0")}
                   </button>
@@ -441,7 +276,7 @@ function Home() {
 
               {/* slide dots */}
               <div className="mt-6 flex items-center gap-2 xl:hidden">
-                {SLIDES.map((s, i) => (
+                {SLIDES.map((s: any, i: number) => (
                   <button
                     key={s.id}
                     type="button"
@@ -451,7 +286,9 @@ function Home() {
                     className="h-px w-8 transition-all duration-500"
                     style={{
                       backgroundColor:
-                        i === slide ? "var(--slide-accent)" : "color-mix(in oklab, var(--ivory) 30%, transparent)",
+                        i === slide
+                          ? "var(--slide-accent)"
+                          : "color-mix(in oklab, var(--ivory) 30%, transparent)",
                     }}
                   />
                 ))}
@@ -463,7 +300,7 @@ function Home() {
         {/* ── Stats ──────────────────────────────────────── */}
         <section className="border-b border-border bg-olive-soft">
           <div className="mx-auto grid max-w-[1600px] grid-cols-2 gap-y-12 px-5 py-16 md:px-10 lg:grid-cols-4">
-            {STATS.map((s, i) => (
+            {STATS.map((s: { value: number; suffix: string; label: string }, i: number) => (
               <Reveal key={s.label} delay={i * 90} className="text-center lg:text-left">
                 <Counter value={s.value} suffix={s.suffix} />
                 <p className="rule-label mt-3 text-muted-foreground">{s.label}</p>
@@ -481,25 +318,25 @@ function Home() {
                 Shop by <span className="italic">category</span>
               </h2>
             </div>
-            <a href="#boutiques" className="link-underline text-[0.7rem] uppercase tracking-[0.2em] text-muted-foreground">
+            <a
+              href="#boutiques"
+              className="link-underline text-[0.7rem] uppercase tracking-[0.2em] text-muted-foreground"
+            >
               View all categories
             </a>
           </Reveal>
 
           <div className="mt-16 grid gap-x-6 gap-y-14 sm:grid-cols-2 lg:grid-cols-4">
             {CATEGORIES.map((c, i) => (
-              <Reveal
-                key={c.name}
-                delay={i * 110}
-                className={i % 2 === 1 ? "lg:mt-20" : ""}
-              >
-                <Link
-                  to="/shop/$category"
-                  params={{ category: c.slug }}
-                  className="group block"
-                >
+              <Reveal key={c.name} delay={i * 110} className={i % 2 === 1 ? "lg:mt-20" : ""}>
+                <Link to="/shop/$category" params={{ category: c.slug }} className="group block">
                   <div className="img-zoom aspect-[3/4] bg-cream">
-                    <img src={c.image} alt={c.alt} loading="lazy" className="h-full w-full object-cover" />
+                    <img
+                      src={c.image}
+                      alt={c.alt}
+                      loading="lazy"
+                      className="h-full w-full object-cover"
+                    />
                   </div>
                   <div className="mt-5 flex items-baseline justify-between border-b border-border pb-4 transition-colors duration-300 group-hover:border-gold">
                     <h3 className="font-serif text-2xl">{c.name}</h3>
@@ -511,22 +348,77 @@ function Home() {
           </div>
         </section>
 
+        {/* ── Shop by Style ─────────────────────────────── */}
+        <section className="mx-auto max-w-[1600px] px-5 py-24 md:px-10 md:py-36 border-t border-border/40">
+          <Reveal className="flex flex-wrap items-end justify-between gap-6">
+            <div>
+              <p className="rule-label text-muted-foreground">02 — The Aesthetic</p>
+              <h2 className="display mt-5 text-[clamp(2.6rem,6vw,5rem)]">
+                Shop by <span className="italic">style</span>
+              </h2>
+            </div>
+            <Link
+              to="/shop"
+              className="link-underline text-[0.7rem] uppercase tracking-[0.2em] text-muted-foreground"
+            >
+              View all styles
+            </Link>
+          </Reveal>
+
+          <div className="mt-16 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              { name: "Quiet Luxury", slug: "quiet-luxury", kicker: "Minimalism", image: boutique1, desc: "Understated silhouettes, neutral tones, and premium natural materials." },
+              { name: "Modern Tailoring", slug: "modern-tailoring", kicker: "Structure", image: boutique2, desc: "Sharp blazers, pleated trousers, and structural outer layers." },
+              { name: "Archive Pieces", slug: "archive", kicker: "Vintage", image: SLIDES[2]?.image || SLIDES[0]?.image, desc: "Highly coveted historical pieces from legendary design houses." },
+              { name: "Resort Wear", slug: "resort", kicker: "Escapism", image: SLIDES[1]?.image || SLIDES[0]?.image, desc: "Flowing silks, light linens, and sun-drenched silhouettes." },
+            ].map((style, i) => (
+              <Reveal key={style.slug} delay={i * 110} className={i % 2 === 1 ? "lg:mt-12" : ""}>
+                <Link to="/style/$tag" params={{ tag: style.slug }} className="group block relative overflow-hidden bg-cream border border-border/30 hover:border-gold transition-colors duration-500 rounded p-6">
+                  <div className="img-zoom aspect-[3/4] bg-cream overflow-hidden mb-6">
+                    <img
+                      src={style.image ? getCloudinaryImageUrl(style.image, "card") : ""}
+                      alt={style.name}
+                      loading="lazy"
+                      className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                    />
+                  </div>
+                  <p className="rule-label text-muted-foreground text-[0.6rem] mb-2">{style.kicker}</p>
+                  <h3 className="font-serif text-2xl group-hover:text-gold transition-colors duration-300">{style.name}</h3>
+                  <p className="mt-3 text-xs text-muted-foreground leading-relaxed">{style.desc}</p>
+                  <span className="inline-flex items-center gap-1.5 mt-5 text-[0.6rem] uppercase tracking-[0.2em] font-semibold group-hover:translate-x-1 transition-transform">
+                    Explore <ArrowRight className="h-3 w-3" />
+                  </span>
+                </Link>
+              </Reveal>
+            ))}
+          </div>
+        </section>
+
         {/* ── Editorial split ────────────────────────────── */}
         <section className="bg-cream">
           <div className="mx-auto grid max-w-[1600px] items-center gap-12 px-5 py-24 md:px-10 md:py-36 lg:grid-cols-2 lg:gap-24">
-            <Reveal variant="mask" className="order-2 aspect-[4/3] overflow-hidden lg:order-1 lg:aspect-[4/5]">
-              <img src={boutique1} alt="Interior of a travertine boutique with brass rails" loading="lazy" className="h-full w-full object-cover" />
+            <Reveal
+              variant="mask"
+              className="order-2 aspect-[4/3] overflow-hidden lg:order-1 lg:aspect-[4/5]"
+            >
+              <img
+                src={boutique1}
+                alt="Interior of a travertine boutique with brass rails"
+                loading="lazy"
+                className="h-full w-full object-cover"
+              />
             </Reveal>
             <Reveal delay={140} className="order-1 lg:order-2">
-              <p className="rule-label text-muted-foreground">02 — The Journal</p>
+              <p className="rule-label text-muted-foreground">03 — The Journal</p>
               <h2 className="display mt-6 text-[clamp(2.4rem,5.5vw,4.6rem)]">
                 Rooms that make
                 <br />
                 <span className="italic">you slow down.</span>
               </h2>
               <p className="mt-8 max-w-lg text-[0.95rem] leading-[1.9] text-muted-foreground">
-                We photograph every partner boutique in its own light — the travertine, the brass, the
-                quiet of a Tuesday morning. Because where a piece comes from is part of what it is.
+                We photograph every partner boutique in its own light — the travertine, the brass,
+                the quiet of a Tuesday morning. Because where a piece comes from is part of what it
+                is.
               </p>
               <a href="#boutiques" className="btn-ghost-luxe mt-10">
                 Read the story <ArrowRight />
@@ -539,12 +431,15 @@ function Home() {
         <section id="trending" className="mx-auto max-w-[1600px] px-5 py-24 md:px-10 md:py-36">
           <Reveal className="flex flex-wrap items-end justify-between gap-6">
             <div>
-              <p className="rule-label text-muted-foreground">03 — This Week</p>
+              <p className="rule-label text-muted-foreground">04 — This Week</p>
               <h2 className="display mt-5 text-[clamp(2.6rem,6vw,5rem)]">
                 Most <span className="italic">wanted</span>
               </h2>
             </div>
-            <a href="#collections" className="link-underline text-[0.7rem] uppercase tracking-[0.2em] text-muted-foreground">
+            <a
+              href="#collections"
+              className="link-underline text-[0.7rem] uppercase tracking-[0.2em] text-muted-foreground"
+            >
               View all pieces
             </a>
           </Reveal>
@@ -560,9 +455,56 @@ function Home() {
           </div>
         </section>
 
+        {/* ── Curated Edits ──────────────────────────────── */}
+        <section className="mx-auto max-w-[1600px] px-5 py-24 md:px-10 md:py-36 border-t border-border/40">
+          <Reveal className="flex flex-wrap items-end justify-between gap-6 mb-16">
+            <div>
+              <p className="rule-label text-muted-foreground">05 — Curated Edits</p>
+              <h2 className="display mt-5 text-[clamp(2.6rem,6vw,5rem)]">
+                The Editorial <span className="italic">Pages</span>
+              </h2>
+            </div>
+            <p className="text-[0.7rem] uppercase tracking-[0.2em] text-muted-foreground">
+              Exclusive seasonal capsules
+            </p>
+          </Reveal>
+
+          <div className="grid gap-12 lg:grid-cols-2">
+            {curatedPages.map((page: any, i: number) => (
+              <Reveal key={page.id} delay={i * 110}>
+                <Link
+                  to="/curated/$slug"
+                  params={{ slug: page.slug }}
+                  className="group block relative overflow-hidden bg-cream border border-border/30 hover:border-gold transition-colors duration-500 rounded p-6 h-full flex flex-col"
+                >
+                  <div className="img-zoom aspect-[16/10] bg-cream overflow-hidden mb-6">
+                    <img
+                      src={page.hero_image_url ? getCloudinaryImageUrl(page.hero_image_url, "banner") : getCloudinaryImageUrl(boutique1, "banner")}
+                      alt={page.title}
+                      loading="lazy"
+                      className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                    />
+                  </div>
+                  <p className="rule-label text-gold text-[0.62rem] uppercase tracking-[0.18em] mb-2">Edit</p>
+                  <h3 className="font-serif text-3xl group-hover:text-gold transition-colors duration-300">{page.title}</h3>
+                  <p className="mt-3 text-sm text-muted-foreground leading-relaxed flex-1">{page.subtitle}</p>
+                  <span className="inline-flex items-center gap-1.5 mt-6 text-[0.6875rem] uppercase tracking-[0.2em] font-semibold group-hover:translate-x-1 transition-transform">
+                    Enter Edit <ArrowRight className="h-3.5 w-3.5" />
+                  </span>
+                </Link>
+              </Reveal>
+            ))}
+          </div>
+        </section>
+
         {/* ── Designer spotlight ─────────────────────────── */}
         <section
-          style={{ backgroundColor: activeDesigner.bg, "--gold": activeDesigner.accent } as React.CSSProperties}
+          style={
+            {
+              backgroundColor: activeDesigner.bg,
+              "--gold": activeDesigner.accent,
+            } as React.CSSProperties
+          }
           className="text-ivory transition-[background-color] duration-[1000ms] ease-[cubic-bezier(0.22,1,0.36,1)]"
         >
           <div className="mx-auto grid max-w-[1600px] items-center gap-12 px-5 py-24 md:px-10 md:py-36 lg:grid-cols-[0.85fr_1.15fr] lg:gap-24">
@@ -582,18 +524,23 @@ function Home() {
               ))}
             </Reveal>
             <Reveal delay={140}>
-              <p className="rule-label text-ivory/40">04 — Designer Spotlight</p>
-              <h2 key={activeDesigner.id} className="display mt-6 text-[clamp(2.4rem,5.5vw,4.8rem)] animate-[hero-line_900ms_cubic-bezier(0.22,1,0.36,1)_both]">
+              <p className="rule-label text-ivory/40">06 — Designer Spotlight</p>
+              <h2
+                key={activeDesigner.id}
+                className="display mt-6 text-[clamp(2.4rem,5.5vw,4.8rem)] animate-[hero-line_900ms_cubic-bezier(0.22,1,0.36,1)_both]"
+              >
                 {activeDesigner.name}
               </h2>
               <p className="mt-8 max-w-xl text-[0.95rem] leading-[1.9] text-ivory/60">
                 {activeDesigner.bio}
               </p>
               <dl className="mt-12 grid max-w-lg grid-cols-3 gap-8 border-t border-ivory/12 pt-8">
-                {activeDesigner.stats.map(([k, v]) => (
+                {activeDesigner.stats.map(([k, v]: [string, string]) => (
                   <div key={k}>
                     <dt className="rule-label text-ivory/40">{k}</dt>
-                    <dd className="mt-2 font-serif text-2xl" style={{ color: "var(--gold)" }}>{v}</dd>
+                    <dd className="mt-2 font-serif text-2xl" style={{ color: "var(--gold)" }}>
+                      {v}
+                    </dd>
                   </div>
                 ))}
               </dl>
@@ -603,7 +550,9 @@ function Home() {
                   <button
                     type="button"
                     aria-label="Previous designer"
-                    onClick={() => setDesignerIdx((i) => (i - 1 + DESIGNERS.length) % DESIGNERS.length)}
+                    onClick={() =>
+                      setDesignerIdx((i) => (i - 1 + DESIGNERS.length) % DESIGNERS.length)
+                    }
                     className="grid h-11 w-11 place-items-center rounded-full border border-ivory/25 text-ivory/70 transition-colors duration-300 hover:border-gold hover:text-gold"
                   >
                     <ArrowRight className="rotate-180" />
@@ -637,11 +586,10 @@ function Home() {
           </div>
         </section>
 
-
         {/* ── Boutiques ──────────────────────────────────── */}
         <section id="boutiques" className="mx-auto max-w-[1600px] px-5 py-24 md:px-10 md:py-36">
           <Reveal>
-            <p className="rule-label text-muted-foreground">05 — The Directory</p>
+            <p className="rule-label text-muted-foreground">07 — The Directory</p>
             <h2 className="display mt-5 max-w-3xl text-[clamp(2.6rem,6vw,5rem)]">
               One hundred and forty boutiques worth <span className="italic">knowing.</span>
             </h2>
@@ -649,7 +597,12 @@ function Home() {
 
           <div className="mt-16 grid gap-6 lg:grid-cols-[1.4fr_1fr]">
             <Reveal className="img-zoom relative aspect-[16/10] bg-cream">
-              <img src={boutique2} alt="Minimal charcoal atelier with a single garment under light" loading="lazy" className="h-full w-full object-cover" />
+              <img
+                src={boutique2}
+                alt="Minimal charcoal atelier with a single garment under light"
+                loading="lazy"
+                className="h-full w-full object-cover"
+              />
               <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-ink/70 to-transparent p-8">
                 <p className="rule-label text-ivory/70">Melbourne</p>
                 <p className="display mt-2 text-4xl text-ivory">Silk &amp; Stone</p>

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { HeartIcon } from "./Icons";
+import { getCloudinaryImageUrl } from "@/lib/cloudinary-images";
 
 export interface Product {
   name: string;
@@ -9,6 +10,7 @@ export interface Product {
   badge?: string;
   image: string;
   alt: string;
+  saleInfo?: { id: string; name: string; slug: string };
 }
 
 export function ProductCard({ product }: { product: Product }) {
@@ -18,23 +20,27 @@ export function ProductCard({ product }: { product: Product }) {
     <article className="group">
       <div className="img-zoom relative aspect-[3/4] bg-cream">
         <img
-          src={product.image}
+          src={getCloudinaryImageUrl(product.image, "card")}
           alt={product.alt}
           loading="lazy"
           className="h-full w-full object-cover"
         />
 
-        {product.badge && (
-          <span className="rule-label absolute left-4 top-4 bg-background/90 px-2.5 py-1.5 opacity-0 transition-opacity duration-500 group-hover:opacity-100 md:opacity-100">
-            {product.badge}
+        {(product.saleInfo || product.badge) && (
+          <span className={`rule-label absolute left-4 top-4 px-2.5 py-1.5 opacity-0 transition-opacity duration-500 group-hover:opacity-100 md:opacity-100 ${product.saleInfo ? "bg-gold text-ink font-semibold" : "bg-background/90"}`}>
+            {product.saleInfo ? product.saleInfo.name : product.badge}
           </span>
         )}
 
         <button
           aria-label={saved ? "Remove from wishlist" : "Save to wishlist"}
           aria-pressed={saved}
-          onClick={() => setSaved((s) => !s)}
-          className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center bg-background/80 backdrop-blur-sm transition-all duration-300 hover:bg-background"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setSaved((s) => !s);
+          }}
+          className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center bg-background/80 backdrop-blur-sm transition-all duration-300 hover:bg-background cursor-pointer"
         >
           <HeartIcon
             className={`transition-all duration-300 ${
@@ -44,7 +50,7 @@ export function ProductCard({ product }: { product: Product }) {
         </button>
 
         <div className="pointer-events-none absolute inset-x-3 bottom-3 translate-y-2 opacity-0 transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:pointer-events-auto group-hover:translate-y-0 group-hover:opacity-100">
-          <button className="w-full bg-background/95 py-3 text-[0.6rem] uppercase tracking-[0.22em] backdrop-blur transition-colors duration-300 hover:bg-olive-deep hover:text-ivory">
+          <button className="w-full bg-background/95 py-3 text-[0.6rem] uppercase tracking-[0.22em] backdrop-blur transition-colors duration-300 hover:bg-olive-deep hover:text-ivory cursor-pointer">
             Quick view
           </button>
         </div>
