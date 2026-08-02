@@ -1,15 +1,5 @@
 import { z } from "zod";
 
-export const sectionTypes = [
-  "hero",
-  "products",
-  "sales",
-  "merchants",
-  "categories",
-  "editorial",
-  "banner",
-  "blog_posts",
-] as const;
 export const pageStatuses = ["draft", "published", "archived"] as const;
 const nullable = (max: number) =>
   z
@@ -46,48 +36,9 @@ export const curatedPageSchema = z.object({
   seo_description: nullable(500),
 });
 
-export const curatedSectionSchema = z.object({
-  id: z.string().uuid().optional(),
-  curated_page_id: z.string().uuid(),
-  section_type: z.enum(sectionTypes),
-  title: nullable(180),
-  subtitle: nullable(300),
-  content: nullable(50000),
-  image_url: nullable(2000),
-  image_public_id: nullable(500),
-  mobile_image_url: nullable(2000),
-  mobile_image_public_id: nullable(500),
-  link_url: z
-    .union([
-      z.literal(""),
-      z
-        .string()
-        .url()
-        .refine((v) => /^https?:\/\//i.test(v), "Use an http or https URL"),
-    ])
-    .optional()
-    .transform((v) => v || null),
-  link_label: nullable(100),
-  display_order: z.coerce.number().int().min(0),
-  is_active: z.boolean(),
-  item_ids: z.array(z.string().uuid()).default([]),
-  categories: z
-    .array(
-      z.object({
-        id: z.string().uuid(),
-        custom_title: z.string().max(150).nullable().optional(),
-        custom_image_url: z.string().url().nullable().optional(),
-        custom_image_public_id: z.string().nullable().optional(),
-      }),
-    )
-    .default([]),
-});
-
-export function publishingErrors(
-  sections: Array<{ section_type: string; is_active: boolean; item_count?: number }>,
-) {
-  const relational = new Set(["products", "sales", "merchants", "categories", "blog_posts"]);
-  return sections
-    .filter((s) => s.is_active && relational.has(s.section_type) && !s.item_count)
-    .map((s) => `${s.section_type.replace("_", " ")} section requires at least one item`);
+export function pagePublishingErrors(productCount: number) {
+  if (productCount === 0) {
+    return ["Curated page requires at least one product to be published"];
+  }
+  return [];
 }

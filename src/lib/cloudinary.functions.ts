@@ -14,11 +14,29 @@ const publicId = z
 
 export const adminSignCloudinaryUpload = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) => z.object({ publicId }).parse(data))
+  .inputValidator((data: unknown) =>
+    z
+      .object({
+        entityType: z.enum([
+          "banner",
+          "category",
+          "collection",
+          "designer",
+          "product",
+          "sale",
+          "seed",
+          "variant",
+        ]),
+        entityId: z.string().trim().max(180).optional(),
+        imageId: z.string().trim().max(180).optional(),
+        fileName: z.string().trim().max(255).optional(),
+      })
+      .parse(data),
+  )
   .handler(async ({ data, context }) => {
     await assertAdmin(context as any);
     const { signCloudinaryUpload } = await import("./cloudinary.server");
-    return signCloudinaryUpload(data.publicId);
+    return signCloudinaryUpload(data);
   });
 
 export const adminDeleteCloudinaryImage = createServerFn({ method: "POST" })

@@ -1,251 +1,470 @@
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { createFileRoute, notFound, Link } from "@tanstack/react-router";
+import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
+import { getPublishedCuratedPageBySlug } from "@/lib/curated-public.functions";
+import { getCloudinaryImageUrl } from "@/lib/cloudinary-images";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
-import { Reveal } from "@/components/Reveal";
 import { ProductCard } from "@/components/ProductCard";
-import { getCuratedPageBySlug } from "@/lib/catalog.functions";
-import { queryOptions } from "@tanstack/react-query";
-import { getCloudinaryImageUrl } from "@/lib/cloudinary-images";
-import { ArrowRight } from "@/components/Icons";
+import { Reveal } from "@/components/Reveal";
+import { CuratedPageHero, CuratedPageSkeleton, CuratedPageNotFound } from "@/components/curated";
+import { useMemo, useState, useEffect } from "react";
+import { FilterGroup, FilterCheck, SwatchCheck, FilterChip } from "@/components/Filters";
+import { COLOURS, CONDITIONS, PRICE_BANDS, SIZES } from "@/lib/catalog-ui";
+import { ArrowRight, CloseIcon } from "@/components/Icons";
+import { catalogMetadataQuery, publicCuratedPagesQuery } from "@/lib/catalog-queries";
 
 export const curatedPageQuery = (slug: string) =>
   queryOptions({
-    queryKey: ["curated-page", slug],
-    queryFn: () => getCuratedPageBySlug({ data: slug }),
+    queryKey: ["curated-page-public", slug],
+    queryFn: () => getPublishedCuratedPageBySlug({ data: { slug } }),
+    staleTime: 1000 * 60 * 5, // 5 minutes cache
   });
 
 export const Route = createFileRoute("/curated/$slug")({
   loader: async ({ params, context }) => {
-    const page = await context.queryClient.ensureQueryData(curatedPageQuery(params.slug));
-    if (!page) throw notFound();
-    return { title: page.title, subtitle: page.subtitle };
+    const [page] = await Promise.all([
+      context.queryClient.ensureQueryData(curatedPageQuery(params.slug)),
+      context.queryClient.ensureQueryData(catalogMetadataQuery),
+      context.queryClient.ensureQueryData(publicCuratedPagesQuery),
+    ]);
+    if (!page || page.status !== "published") {
+      throw notFound();
+    }
+    return page;
   },
   head: ({ loaderData }) => {
     if (!loaderData) {
       return {
-        meta: [{ title: "Page Unavailable — DesignerSale" }],
+        meta: [{ title: "Curated Edit Unavailable — DesignerSale" }],
       };
     }
-    return {
-      meta: [
-        { title: `${loaderData.title} | DesignerSale` },
-        { name: "description", content: loaderData.subtitle || "Curated editorial edit on DesignerSale." },
-      ],
-    };
+
+    const title = loaderData.seoTitle || `${loaderData.title} | DesignerSale`;
+    const description =
+      loaderData.seoDescription ||
+      loaderData.subtitle ||
+      loaderData.description ||
+      "Curated editorial collection on DesignerSale.";
+    const ogImage = loaderData.heroImageUrl
+      ? getCloudinaryImageUrl(loaderData.heroImageUrl, "banner")
+      : undefined;
+
+    const meta: Array<Record<string, string>> = [
+      { title },
+      { name: "description", content: description },
+      { property: "og:title", content: title },
+      { property: "og:description", content: description },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: title },
+      { name: "twitter:description", content: description },
+    ];
+
+    if (ogImage) {
+      meta.push({ property: "og:image", content: ogImage });
+      meta.push({ name: "twitter:image", content: ogImage });
+    }
+
+    return { meta };
   },
-  component: CuratedEditPage,
+  pendingComponent: CuratedPageSkeleton,
+  notFoundComponent: CuratedPageNotFound,
+  component: CuratedPublicRoute,
 });
 
-function CuratedEditPage() {
+const SWATCHES: Record<string, string> = {
+  Ivory: "oklch(0.976 0.008 85)",
+  Champagne: "oklch(0.877 0.034 82)",
+  Stone: "oklch(0.895 0.016 80)",
+  Ink: "oklch(0.18 0.006 60)",
+  Camel: "oklch(0.72 0.072 78)",
+};
+
+const SORTS = [
+  { key: "curated", label: "Curated" },
+  { key: "new", label: "Newest" },
+  { key: "low", label: "Price, low to high" },
+  { key: "high", label: "Price, high to low" },
+  { key: "reduction", label: "Biggest Discount" },
+  { key: "bestselling", label: "Best Selling" },
+  { key: "trending", label: "Trending" },
+  { key: "reduced", label: "Recently Reduced" },
+] as const;
+
+type SortKey = (typeof SORTS)[number]["key"];
+
+function CuratedPublicRoute() {
   const { slug } = Route.useParams();
   const { data: page } = useSuspenseQuery(curatedPageQuery(slug));
+  const { data: metadata } = useSuspenseQuery(catalogMetadataQuery);
+  const { data: publicPages } = useSuspenseQuery(publicCuratedPagesQuery);
 
-  if (!page) return null;
+  if (!page || page.status !== "published") {
+    return <CuratedPageNotFound />;
+  }
 
-  const sections = (page.curated_sections ?? [])
-    .filter((s: any) => s.is_active)
-    .sort((a: any, b: any) => a.display_order - b.display_order);
+  const DESIGNERS = metadata.designers;
+  const items = page.products || [];
+
+  const [designers, setDesigners] = useState<string[]>([]);
+  const [sizes, setSizes] = useState<string[]>([]);
+  const [colours, setColours] = useState<string[]>([]);
+  const [conditions, setConditions] = useState<string[]>([]);
+  const [bands, setBands] = useState<string[]>([]);
+  const [sort, setSort] = useState<SortKey>("curated");
+  const [visible, setVisible] = useState(8);
+  const [drawer, setDrawer] = useState(false);
+
+  // Sync designer from URL search parameter (e.g. from Designer Spotlight carousel)
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const designerParam = params.get("designer");
+      if (designerParam && DESIGNERS.includes(designerParam)) {
+        setDesigners([designerParam]);
+      }
+    }
+  }, [DESIGNERS]);
+
+  // Reset filters and page size when slug/collection changes
+  useEffect(() => {
+    setDesigners([]);
+    setSizes([]);
+    setColours([]);
+    setConditions([]);
+    setBands([]);
+    setSort("curated");
+    setVisible(8);
+  }, [slug]);
+
+  function toggle(list: string[], value: string) {
+    return list.includes(value) ? list.filter((v) => v !== value) : [...list, value];
+  }
+
+  const count = (fn: (i: (typeof items)[number]) => boolean) => items.filter(fn).length;
+
+  const filtered = useMemo(() => {
+    const list = items.filter((i) => {
+      if (designers.length && !designers.includes(i.designer)) return false;
+      if (sizes.length && i.size && !sizes.includes(i.size)) return false;
+      if (colours.length && i.colour && !colours.includes(i.colour)) return false;
+      if (conditions.length && i.condition && !conditions.includes(i.condition)) return false;
+      if (bands.length && i.priceValue !== undefined) {
+        const ok = PRICE_BANDS.filter((b) => bands.includes(b.label)).some(
+          (b) => i.priceValue! >= b.min && i.priceValue! < b.max,
+        );
+        if (!ok) return false;
+      }
+      return true;
+    });
+
+    const sorted = [...list];
+    if (sort === "low") sorted.sort((a, b) => (a.priceValue || 0) - (b.priceValue || 0));
+    if (sort === "high") sorted.sort((a, b) => (b.priceValue || 0) - (a.priceValue || 0));
+    if (sort === "new") sorted.sort((a, b) => (a.addedDaysAgo || 0) - (b.addedDaysAgo || 0));
+    if (sort === "reduction") sorted.sort((a, b) => (b.reduction || 0) - (a.reduction || 0));
+    if (sort === "bestselling") sorted.sort((a, b) => (a.stock || 0) - (b.stock || 0)); // lower stock implies faster selling
+    if (sort === "trending")
+      sorted.sort(
+        (a, b) =>
+          (b.reduction || 0) + (5 - (b.stock || 0)) - ((a.reduction || 0) + (5 - (a.stock || 0))),
+      ); // Trending factor
+    if (sort === "reduced")
+      sorted.sort((a, b) => {
+        const aReduction = a.reduction || 0;
+        const bReduction = b.reduction || 0;
+        const aAdded = a.addedDaysAgo || 0;
+        const bAdded = b.addedDaysAgo || 0;
+        if (aReduction > 0 && bReduction === 0) return -1;
+        if (aReduction === 0 && bReduction > 0) return 1;
+        return aAdded - bAdded;
+      });
+    return sorted;
+  }, [items, designers, sizes, colours, conditions, bands, sort]);
+
+  const chips = [
+    ...designers.map((v) => ({ v, clear: () => setDesigners((s) => toggle(s, v)) })),
+    ...sizes.map((v) => ({ v: `Size ${v}`, clear: () => setSizes((s) => toggle(s, v)) })),
+    ...colours.map((v) => ({ v, clear: () => setColours((s) => toggle(s, v)) })),
+    ...conditions.map((v) => ({ v, clear: () => setConditions((s) => toggle(s, v)) })),
+    ...bands.map((v) => ({ v, clear: () => setBands((s) => toggle(s, v)) })),
+  ];
+
+  const clearAll = () => {
+    setDesigners([]);
+    setSizes([]);
+    setColours([]);
+    setConditions([]);
+    setBands([]);
+  };
+
+  const panel = (
+    <div className="pb-8">
+      <FilterGroup title="Designer">
+        {DESIGNERS.map((d) => (
+          <FilterCheck
+            key={d}
+            label={d}
+            count={count((i) => i.designer === d)}
+            checked={designers.includes(d)}
+            onChange={() => setDesigners((s) => toggle(s, d))}
+          />
+        ))}
+      </FilterGroup>
+
+      <FilterGroup title="Price">
+        {PRICE_BANDS.map((b) => (
+          <FilterCheck
+            key={b.label}
+            label={b.label}
+            count={count(
+              (i) => i.priceValue !== undefined && i.priceValue >= b.min && i.priceValue < b.max,
+            )}
+            checked={bands.includes(b.label)}
+            onChange={() => setBands((s) => toggle(s, b.label))}
+          />
+        ))}
+      </FilterGroup>
+
+      <FilterGroup title="Size">
+        <div className="flex flex-wrap gap-2">
+          {SIZES.map((s) => (
+            <button
+              key={s}
+              onClick={() => setSizes((v) => toggle(v, s))}
+              aria-pressed={sizes.includes(s)}
+              className={`min-w-11 border px-3 py-2 text-[0.65rem] uppercase tracking-[0.16em] transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+                sizes.includes(s)
+                  ? "border-olive-deep bg-olive-deep text-ivory"
+                  : "border-border hover:border-gold hover:bg-cream"
+              }`}
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+      </FilterGroup>
+
+      <FilterGroup title="Colour">
+        {COLOURS.map((c) => (
+          <SwatchCheck
+            key={c}
+            label={c}
+            swatch={SWATCHES[c]}
+            checked={colours.includes(c)}
+            onChange={() => setColours((s) => toggle(s, c))}
+          />
+        ))}
+      </FilterGroup>
+
+      <FilterGroup title="Condition">
+        {CONDITIONS.map((c) => (
+          <FilterCheck
+            key={c}
+            label={c}
+            count={count((i) => i.condition === c)}
+            checked={conditions.includes(c)}
+            onChange={() => setConditions((s) => toggle(s, c))}
+          />
+        ))}
+      </FilterGroup>
+    </div>
+  );
+
+  const shown = filtered.slice(0, visible);
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <>
       <Nav />
-      <main className="pt-16 md:pt-20">
-        {/* Curated Page Hero */}
-        {page.hero_image_url ? (
-          <section className="relative min-h-[60vh] flex items-center justify-center overflow-hidden bg-cream py-20">
-            <div className="absolute inset-0 z-0">
-              <picture>
-                <source
-                  media="(max-width:640px)"
-                  srcSet={getCloudinaryImageUrl(page.mobile_hero_image_url || page.hero_image_url, "banner")}
-                />
-                <img
-                  src={getCloudinaryImageUrl(page.hero_image_url, "banner")}
-                  alt={page.title}
-                  className="h-full w-full object-cover"
-                />
-              </picture>
-              <div className="absolute inset-0 bg-black/35 backdrop-blur-[2px]" />
-            </div>
-            <div className="relative z-10 max-w-4xl px-5 text-center text-ivory">
-              <Reveal>
-                <span className="rule-label text-gold uppercase tracking-[0.2em] mb-4 block">Editorial Edit</span>
-                <h1 className="display text-[clamp(2.5rem,6vw,5.5rem)] text-white">{page.title}</h1>
-                {page.subtitle && (
-                  <p className="mt-6 text-lg md:text-xl text-ivory/80 leading-relaxed max-w-2xl mx-auto">
-                    {page.subtitle}
-                  </p>
-                )}
-              </Reveal>
-            </div>
-          </section>
-        ) : (
-          <section className="mx-auto max-w-4xl px-5 py-16 text-center">
-            <Reveal>
-              <span className="rule-label text-gold uppercase tracking-[0.2em] mb-4 block">Editorial Edit</span>
-              <h1 className="display text-[clamp(2.5rem,6vw,5rem)]">{page.title}</h1>
-              {page.subtitle && (
-                <p className="mt-6 text-lg md:text-xl text-muted-foreground leading-relaxed">
-                  {page.subtitle}
-                </p>
-              )}
-            </Reveal>
-          </section>
-        )}
+      <main>
+        {/* Page Hero */}
+        <CuratedPageHero page={page} />
 
-        {/* Curated Page Description */}
-        {page.description && (
-          <section className="mx-auto max-w-3xl px-5 py-12 md:py-16 text-center border-b border-border/40">
-            <Reveal>
-              <p className="font-serif italic text-lg leading-relaxed text-muted-foreground">
-                "{page.description}"
+        {/* Breadcrumb + sibling curated pages */}
+        <div className="border-b border-border">
+          <div className="mx-auto flex max-w-[1600px] flex-wrap items-center gap-x-8 gap-y-4 px-5 py-5 md:px-10">
+            <nav aria-label="Breadcrumb" className="rule-label text-muted-foreground">
+              <Link to="/" className="link-underline">
+                Home
+              </Link>
+              <span className="mx-3">/</span>
+              <span className="text-foreground">{page.title}</span>
+            </nav>
+            <ul className="ml-auto flex flex-wrap items-center gap-6">
+              {publicPages.map((p) => (
+                <li key={p.slug}>
+                  <Link
+                    to="/curated/$slug"
+                    params={{ slug: p.slug }}
+                    className={`link-underline text-[0.7rem] uppercase tracking-[0.18em] transition-colors duration-300 ${
+                      p.slug === slug
+                        ? "text-foreground"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {p.title}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+
+        {/* Listing */}
+        <div className="mx-auto grid max-w-[1600px] gap-x-14 px-5 py-10 md:px-10 lg:grid-cols-[240px_1fr] lg:py-16">
+          {/* Desktop filter rail */}
+          <aside className="hidden lg:block">
+            <div className="sticky top-28">
+              <div className="flex items-baseline justify-between">
+                <h2 className="rule-label">Refine</h2>
+                {chips.length > 0 && (
+                  <button
+                    onClick={clearAll}
+                    className="link-underline text-[0.65rem] uppercase tracking-[0.16em] text-muted-foreground"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+              <div className="mt-2 max-h-[calc(100vh-11rem)] overflow-y-auto pr-2">{panel}</div>
+            </div>
+          </aside>
+
+          <div>
+            {/* Toolbar */}
+            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border pb-5">
+              <p className="text-sm text-muted-foreground">
+                <span className="tabular-nums text-foreground">{filtered.length}</span> pieces
+                {chips.length > 0 ? " refined" : " in this edit"}
               </p>
-            </Reveal>
-          </section>
-        )}
 
-        {/* Curated Sections */}
-        <div className="divide-y divide-border/40">
-          {sections.map((s: any, idx: number) => {
-            const hasHeader = s.title || s.subtitle;
-            return (
-              <section key={s.id} className="mx-auto max-w-[1600px] px-5 py-20 md:px-10 md:py-28">
-                {hasHeader && (
-                  <Reveal className="mb-12">
-                    {s.title && (
-                      <h2 className="display text-[clamp(1.8rem,3vw,2.8rem)]">{s.title}</h2>
-                    )}
-                    {s.subtitle && (
-                      <p className="mt-3 text-sm text-muted-foreground max-w-xl leading-relaxed">
-                        {s.subtitle}
-                      </p>
-                    )}
-                  </Reveal>
-                )}
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={() => setDrawer(true)}
+                  className="border border-border px-4 py-2.5 text-[0.65rem] uppercase tracking-[0.18em] transition-colors duration-300 hover:border-gold lg:hidden"
+                >
+                  Filters{chips.length ? ` (${chips.length})` : ""}
+                </button>
 
-                {/* HERO / BANNER SECTION */}
-                {["hero", "banner"].includes(s.section_type) && s.image_url && (
-                  <Reveal className="relative overflow-hidden aspect-[16/7] bg-cream group">
-                    <picture>
-                      <source
-                        media="(max-width:640px)"
-                        srcSet={getCloudinaryImageUrl(s.mobile_image_url || s.image_url, "banner")}
-                      />
-                      <img
-                        src={getCloudinaryImageUrl(s.image_url, "banner")}
-                        alt={s.title || ""}
-                        className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.02]"
-                      />
-                    </picture>
-                  </Reveal>
-                )}
+                <label className="flex items-center gap-3">
+                  <span className="rule-label hidden text-muted-foreground sm:inline">Sort</span>
+                  <select
+                    value={sort}
+                    onChange={(e) => setSort(e.target.value as SortKey)}
+                    className="cursor-pointer border-b border-border bg-transparent py-2 pr-6 text-[0.7rem] uppercase tracking-[0.16em] outline-none transition-colors duration-300 hover:border-gold focus:border-gold"
+                  >
+                    {SORTS.map((s) => (
+                      <option key={s.key} value={s.key}>
+                        {s.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            </div>
 
-                {/* EDITORIAL CONTENT SECTION */}
-                {s.section_type === "editorial" && s.content && (
-                  <Reveal className="prose prose-olive max-w-4xl mx-auto leading-[1.8] text-muted-foreground font-serif text-lg py-4">
-                    <div dangerouslySetInnerHTML={{ __html: s.content }} />
-                  </Reveal>
-                )}
+            {/* Active chips */}
+            {chips.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2.5 pt-5">
+                {chips.map((c) => (
+                  <FilterChip key={c.v} label={c.v} onRemove={c.clear} />
+                ))}
+                <button
+                  onClick={clearAll}
+                  className="link-underline ml-2 text-[0.65rem] uppercase tracking-[0.16em] text-muted-foreground"
+                >
+                  Clear all
+                </button>
+              </div>
+            )}
 
-                {/* PRODUCT SECTION */}
-                {s.section_type === "products" && s.curated_section_products && (
-                  <div className="grid grid-cols-2 gap-x-5 gap-y-12 lg:grid-cols-4">
-                    {[...s.curated_section_products]
-                      .sort((a: any, b: any) => a.display_order - b.display_order)
-                      .map((csp: any, pIdx: number) => {
-                        if (!csp.products) return null;
-                        return (
-                          <Reveal key={csp.id} delay={pIdx * 90}>
-                            <Link to="/product/$id" params={{ id: csp.products.id }}>
-                              <ProductCard product={csp.products} />
-                            </Link>
-                          </Reveal>
-                        );
-                      })}
+            {filtered.length === 0 ? (
+              <div className="py-28 text-center">
+                <p className="eyebrow">Nothing matches</p>
+                <h3 className="display mt-4 text-4xl">An empty rail</h3>
+                <p className="mx-auto mt-4 max-w-sm text-sm text-muted-foreground">
+                  Loosen a filter or two — the edit is small by design.
+                </p>
+                <button onClick={clearAll} className="btn-luxe mt-8">
+                  Reset filters <ArrowRight />
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-2 gap-x-5 gap-y-14 pt-10 md:gap-x-8 lg:grid-cols-3">
+                  {shown.map((p, i) => (
+                    <Reveal
+                      key={p.id}
+                      delay={(i % 3) * 70}
+                      className={i % 3 === 1 ? "lg:mt-10" : ""}
+                    >
+                      <Link to="/product/$id" params={{ id: p.id || "" }}>
+                        <ProductCard product={p} />
+                      </Link>
+                    </Reveal>
+                  ))}
+                </div>
+
+                <div className="mt-20 flex flex-col items-center gap-5 border-t border-border pt-12">
+                  <p className="text-[0.65rem] uppercase tracking-[0.2em] text-muted-foreground">
+                    Showing {shown.length} of {filtered.length}
+                  </p>
+                  <div className="h-px w-40 bg-border">
+                    <div
+                      className="h-px bg-gold transition-[width] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]"
+                      style={{ width: `${(shown.length / filtered.length) * 100}%` }}
+                    />
                   </div>
-                )}
-
-                {/* CATEGORIES SECTION */}
-                {s.section_type === "categories" && s.curated_section_categories && (
-                  <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-                    {[...s.curated_section_categories]
-                      .sort((a: any, b: any) => a.display_order - b.display_order)
-                      .map((csc: any, catIdx: number) => {
-                        if (!csc.categories) return null;
-                        const name = csc.custom_title || csc.categories.name;
-                        const img = csc.custom_image_url || csc.categories.image_url;
-                        return (
-                          <Reveal key={csc.id} delay={catIdx * 90}>
-                            <Link
-                              to="/shop/$category"
-                              params={{ category: csc.categories.slug }}
-                              className="group block relative overflow-hidden bg-cream border border-border/30 hover:border-gold transition-colors duration-500 rounded p-6"
-                            >
-                              <div className="img-zoom aspect-[3/4] overflow-hidden mb-6 bg-cream">
-                                <img
-                                  src={img ? getCloudinaryImageUrl(img, "card") : ""}
-                                  alt={name}
-                                  className="h-full w-full object-cover"
-                                />
-                              </div>
-                              <div className="flex items-center justify-between border-b border-border pb-3 transition-colors duration-300 group-hover:border-gold">
-                                <h3 className="font-serif text-xl">{name}</h3>
-                                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                              </div>
-                            </Link>
-                          </Reveal>
-                        );
-                      })}
-                  </div>
-                )}
-
-                {/* MERCHANTS SECTION */}
-                {s.section_type === "merchants" && s.curated_section_merchants && (
-                  <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-                    {[...s.curated_section_merchants]
-                      .sort((a: any, b: any) => a.display_order - b.display_order)
-                      .map((csm: any, merIdx: number) => {
-                        if (!csm.merchants) return null;
-                        const m = csm.merchants;
-                        return (
-                          <Reveal key={csm.id} delay={merIdx * 90}>
-                            <div className="group border border-border/30 rounded p-6 bg-cream hover:border-gold transition-all duration-300 h-full flex flex-col justify-between">
-                              <div>
-                                {m.logo_url && (
-                                  <div className="h-16 w-16 mb-6 rounded-full overflow-hidden bg-background border border-border flex items-center justify-center p-2">
-                                    <img
-                                      src={getCloudinaryImageUrl(m.logo_url, "card")}
-                                      alt={m.name}
-                                      className="h-full w-full object-contain"
-                                    />
-                                  </div>
-                                )}
-                                <h3 className="font-serif text-2xl group-hover:text-gold transition-colors">
-                                  {m.name}
-                                </h3>
-                                <p className="rule-label mt-2 text-muted-foreground">
-                                  {m.city}
-                                </p>
-                              </div>
-                              <Link
-                                to="/shop"
-                                className="inline-flex items-center gap-1.5 mt-8 text-[0.62rem] uppercase tracking-[0.2em] font-semibold link-underline"
-                              >
-                                View Collection <ArrowRight className="h-3 w-3" />
-                              </Link>
-                            </div>
-                          </Reveal>
-                        );
-                      })}
-                  </div>
-                )}
-              </section>
-            );
-          })}
+                  {shown.length < filtered.length && (
+                    <button
+                      onClick={() => setVisible((v) => v + 8)}
+                      className="btn-ghost-luxe mt-2"
+                    >
+                      Load more <ArrowRight />
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </main>
+
+      {/* Mobile filter drawer */}
+      <div
+        className={`fixed inset-0 z-[70] lg:hidden ${drawer ? "pointer-events-auto" : "pointer-events-none"}`}
+        aria-hidden={!drawer}
+      >
+        <div
+          onClick={() => setDrawer(false)}
+          className={`absolute inset-0 bg-olive-deep/30 backdrop-blur-sm transition-opacity duration-500 ${
+            drawer ? "opacity-100" : "opacity-0"
+          }`}
+        />
+        <aside
+          className={`absolute inset-y-0 right-0 flex w-[90%] max-w-sm flex-col bg-background px-7 py-8 transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+            drawer ? "translate-x-0" : "translate-x-full"
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="display text-2xl">Refine</span>
+            <button onClick={() => setDrawer(false)} aria-label="Close filters">
+              <CloseIcon />
+            </button>
+          </div>
+          <div className="mt-6 flex-1 overflow-y-auto">{panel}</div>
+          <div className="flex gap-3 border-t border-border pt-5">
+            <button onClick={clearAll} className="btn-ghost-luxe flex-1 justify-center">
+              Clear
+            </button>
+            <button onClick={() => setDrawer(false)} className="btn-luxe flex-1 justify-center">
+              Show {filtered.length}
+            </button>
+          </div>
+        </aside>
+      </div>
+
       <Footer />
-    </div>
+    </>
   );
 }

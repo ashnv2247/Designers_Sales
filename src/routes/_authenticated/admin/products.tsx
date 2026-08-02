@@ -4,10 +4,15 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { Btn, Check, Field, Panel, SelectInput, TextArea, TextInput } from "@/components/admin/ui";
+import { Btn, Check, Field, SelectInput, TextArea, TextInput } from "@/components/admin/ui";
 import { ProductEditor } from "@/components/admin/ProductEditor";
+import { AdminModal } from "@/components/admin/AdminModal";
 import { adminListProducts, adminUpdateProduct } from "@/lib/admin.functions";
-import { adminCreateProduct, adminDeleteProduct, adminGetRefs } from "@/lib/admin-content.functions";
+import {
+  adminCreateProduct,
+  adminDeleteProduct,
+  adminGetRefs,
+} from "@/lib/admin-content.functions";
 
 const STATUSES = ["draft", "published", "archived", "sold_out"] as const;
 const LABEL: Record<string, string> = {
@@ -21,7 +26,10 @@ export const Route = createFileRoute("/_authenticated/admin/products")({
   head: () => ({
     meta: [
       { title: "Admin Catalogue | DesignerSale" },
-      { name: "description", content: "Create, edit, publish and feature pieces across the DesignerSale catalogue." },
+      {
+        name: "description",
+        content: "Create, edit, publish and feature pieces across the DesignerSale catalogue.",
+      },
       { property: "og:title", content: "Admin Catalogue | DesignerSale" },
       { property: "og:description", content: "Manage the DesignerSale product catalogue." },
       { property: "og:type", content: "website" },
@@ -39,10 +47,15 @@ function AdminProducts() {
   const getRefs = useServerFn(adminGetRefs);
   const qc = useQueryClient();
   const [q, setQ] = useState("");
-  const [openId, setOpenId] = useState<string | null>(null);
+  const [pricingFilter, setPricingFilter] = useState<"all" | "needs-pricing">("all");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState<string>("");
   const [showNew, setShowNew] = useState(false);
 
-  const { data, isPending, error } = useQuery({ queryKey: ["admin-products"], queryFn: () => list({}) });
+  const { data, isPending, error } = useQuery({
+    queryKey: ["admin-products"],
+    queryFn: () => list({}),
+  });
   const { data: refs } = useQuery({ queryKey: ["admin-refs"], queryFn: () => getRefs({}) });
 
   const mutation = useMutation({
@@ -61,7 +74,10 @@ function AdminProducts() {
     onSuccess: (row: any) => {
       toast.success("Piece created");
       setShowNew(false);
-      setOpenId(row?.id ?? null);
+      if (row?.id) {
+        setEditingId(row.id);
+        setEditingName(row.name ?? "New Piece");
+      }
       qc.invalidateQueries({ queryKey: ["admin-products"] });
     },
     onError: (e: Error) => toast.error(e.message || "Could not create that piece"),
@@ -77,15 +93,20 @@ function AdminProducts() {
   });
 
   if (isPending) return <p className="text-sm text-muted-foreground">Loading catalogue…</p>;
-  if (error || !data) return <p className="text-sm text-muted-foreground">We couldn't load the catalogue.</p>;
+  if (error || !data)
+    return <p className="text-sm text-muted-foreground">We couldn't load the catalogue.</p>;
 
-  const rows = (data as any[]).filter((p) =>
-    q.trim() ? p.name.toLowerCase().includes(q.trim().toLowerCase()) : true,
-  );
+  const rows = (data as any[]).filter((p) => {
+    const matchesSearch = q.trim() ? p.name.toLowerCase().includes(q.trim().toLowerCase()) : true;
+    const needsPricing = !(p.product_variants ?? []).some(
+      (variant: any) => variant.is_active && variant.original_price != null,
+    );
+    return matchesSearch && (pricingFilter === "all" || needsPricing);
+  });
 
   return (
     <>
-      <div className="mb-8 flex flex-wrap items-center gap-4">
+      <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
@@ -93,11 +114,27 @@ function AdminProducts() {
           aria-label="Search pieces"
           className="w-full max-w-sm border border-border bg-transparent px-4 py-3 text-sm outline-none focus:border-foreground"
         />
-        <Btn onClick={() => setShowNew((v) => !v)}>{showNew ? "Close" : "New piece"}</Btn>
+        <div className="flex gap-3">
+          <SelectInput
+            aria-label="Filter by pricing status"
+            value={pricingFilter}
+            onChange={(e) => setPricingFilter(e.target.value as "all" | "needs-pricing")}
+          >
+            <option value="all">All pricing</option>
+            <option value="needs-pricing">Needs pricing</option>
+          </SelectInput>
+          <Btn onClick={() => setShowNew(true)}>+ New piece</Btn>
+        </div>
       </div>
 
-      {showNew && refs && (
-        <Panel title="New piece">
+      {/* Create Product Modal */}
+      <AdminModal
+        open={showNew}
+        onOpenChange={setShowNew}
+        title="Create New Piece"
+        description="Add a new luxury item to the catalogue."
+      >
+        {refs && (
           <form
             className="grid gap-5 md:grid-cols-2"
             onSubmit={(e) => {
@@ -154,7 +191,15 @@ function AdminProducts() {
             </Field>
             <Field label="Condition">
               <SelectInput name="condition" defaultValue="new">
-                {["new", "new_with_tags", "new_without_tags", "excellent", "very_good", "good", "fair"].map((c) => (
+                {[
+                  "new",
+                  "new_with_tags",
+                  "new_without_tags",
+                  "excellent",
+                  "very_good",
+                  "good",
+                  "fair",
+                ].map((c) => (
                   <option key={c} value={c}>
                     {c.replace(/_/g, " ")}
                   </option>
@@ -188,29 +233,52 @@ function AdminProducts() {
                 <input type="checkbox" name="is_new_arrival" /> New arrival
               </label>
             </div>
-            <div className="md:col-span-2">
+            <div className="md:col-span-2 flex justify-end gap-3 pt-4">
+              <Btn type="button" variant="ghost" onClick={() => setShowNew(false)}>
+                Cancel
+              </Btn>
               <Btn type="submit" disabled={createMut.isPending}>
-                Create piece
+                {createMut.isPending ? "Creating..." : "Create Piece"}
               </Btn>
             </div>
           </form>
-        </Panel>
-      )}
+        )}
+      </AdminModal>
+
+      {/* Edit Product Modal */}
+      <AdminModal
+        open={Boolean(editingId)}
+        onOpenChange={(open) => {
+          if (!open) setEditingId(null);
+        }}
+        title={`Edit Piece — ${editingName}`}
+        description="Update images, variants, attributes and stock details."
+        maxWidth="max-w-5xl"
+      >
+        {editingId && refs && <ProductEditor productId={editingId} refs={refs as any} />}
+      </AdminModal>
 
       {rows.length === 0 && <p className="text-sm text-muted-foreground">No pieces match.</p>}
       <ul className="border-t border-border">
         {rows.map((p) => {
-          const variant = (p.product_variants ?? [])[0];
+          const hasOptions = p.options && Array.isArray(p.options) && p.options.length > 0;
+          const isAvailable =
+            hasOptions &&
+            p.options.some((o: any) => o.isAvailable && o.sizes?.some((s: any) => s.available));
+          const prices = (p.product_variants ?? [])
+            .filter((variant: any) => variant.is_active && variant.original_price != null)
+            .map((variant: any) => variant.discounted_price ?? variant.original_price);
+          const price = prices.length ? Math.min(...prices) : null;
           return (
             <li key={p.id} className="border-b border-border py-5">
               <div className="grid gap-4 md:grid-cols-[1fr_auto] md:items-center">
                 <div>
-                  <p className="text-sm">{p.name}</p>
+                  <p className="text-sm font-medium">{p.name}</p>
                   <p className="mt-1 text-xs text-muted-foreground">
                     {p.merchants?.name ?? "No merchant"}
-                    {variant
-                      ? ` · ${variant.currency ?? "AUD"} ${variant.discounted_price ?? variant.original_price} · ${variant.stock_quantity} in stock`
-                      : " · no variants yet"}
+                    {price !== undefined && price !== null
+                      ? ` · ${p.currency ?? "AUD"} ${price} · ${isAvailable ? "In stock" : "Out of stock"}`
+                      : " · Price required"}
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-5">
@@ -224,7 +292,10 @@ function AdminProducts() {
                     value={p.status}
                     disabled={mutation.isPending}
                     onChange={(e) =>
-                      mutation.mutate({ id: p.id, status: e.target.value as (typeof STATUSES)[number] })
+                      mutation.mutate({
+                        id: p.id,
+                        status: e.target.value as (typeof STATUSES)[number],
+                      })
                     }
                     className="border border-border bg-transparent px-3 py-2 text-[0.62rem] uppercase tracking-[0.18em]"
                   >
@@ -234,20 +305,26 @@ function AdminProducts() {
                       </option>
                     ))}
                   </select>
-                  <Btn variant="ghost" onClick={() => setOpenId(openId === p.id ? null : p.id)}>
-                    {openId === p.id ? "Close" : "Edit"}
+                  <Btn
+                    variant="ghost"
+                    onClick={() => {
+                      setEditingId(p.id);
+                      setEditingName(p.name);
+                    }}
+                  >
+                    Edit
                   </Btn>
                   <Btn
                     variant="danger"
                     onClick={() => {
-                      if (confirm(`Delete ${p.name}? This cannot be undone.`)) deleteMut.mutate(p.id);
+                      if (confirm(`Delete ${p.name}? This cannot be undone.`))
+                        deleteMut.mutate(p.id);
                     }}
                   >
                     Delete
                   </Btn>
                 </div>
               </div>
-              {openId === p.id && refs && <ProductEditor productId={p.id} refs={refs as any} />}
             </li>
           );
         })}

@@ -1,6 +1,6 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
@@ -61,7 +61,10 @@ const SORTS = [
   { key: "new", label: "Newest" },
   { key: "low", label: "Price, low to high" },
   { key: "high", label: "Price, high to low" },
-  { key: "reduction", label: "Greatest reduction" },
+  { key: "reduction", label: "Biggest Discount" },
+  { key: "bestselling", label: "Best Selling" },
+  { key: "trending", label: "Trending" },
+  { key: "reduced", label: "Recently Reduced" },
 ] as const;
 
 type SortKey = (typeof SORTS)[number]["key"];
@@ -88,6 +91,17 @@ function CategoryPage() {
   const [visible, setVisible] = useState(8);
   const [drawer, setDrawer] = useState(false);
 
+  // Sync designer from URL search parameter (e.g. from Designer Spotlight carousel)
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const designerParam = params.get("designer");
+      if (designerParam && DESIGNERS.includes(designerParam)) {
+        setDesigners([designerParam]);
+      }
+    }
+  }, [DESIGNERS]);
+
   const count = (fn: (i: CatalogItem) => boolean) => items.filter(fn).length;
 
   const filtered = useMemo(() => {
@@ -110,6 +124,17 @@ function CategoryPage() {
     if (sort === "high") sorted.sort((a, b) => b.priceValue - a.priceValue);
     if (sort === "new") sorted.sort((a, b) => a.addedDaysAgo - b.addedDaysAgo);
     if (sort === "reduction") sorted.sort((a, b) => b.reduction - a.reduction);
+    if (sort === "bestselling") sorted.sort((a, b) => (a.stock || 0) - (b.stock || 0)); // lower stock implies faster selling
+    if (sort === "trending")
+      sorted.sort(
+        (a, b) => b.reduction + (5 - (b.stock || 0)) - (a.reduction + (5 - (a.stock || 0))),
+      ); // Trending factor
+    if (sort === "reduced")
+      sorted.sort((a, b) => {
+        if (a.reduction > 0 && b.reduction === 0) return -1;
+        if (a.reduction === 0 && b.reduction > 0) return 1;
+        return a.addedDaysAgo - b.addedDaysAgo;
+      });
     return sorted;
   }, [items, designers, sizes, colours, conditions, bands, sort]);
 

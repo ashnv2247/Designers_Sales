@@ -1,10 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  curatedPageSchema,
-  curatedSectionSchema,
-  publishingErrors,
-  slugify,
-} from "./curated-pages.schemas";
+import { curatedPageSchema, pagePublishingErrors, slugify } from "./curated-pages.schemas";
 describe("curated page validation", () => {
   it("creates safe slugs", () =>
     expect(slugify("  Summer & Silk 2026! ")).toBe("summer-silk-2026"));
@@ -17,24 +12,6 @@ describe("curated page validation", () => {
         seo_title: "x".repeat(256),
       }).success,
     ).toBe(false));
-  it("requires valid links", () =>
-    expect(
-      curatedSectionSchema.safeParse({
-        curated_page_id: crypto.randomUUID(),
-        section_type: "hero",
-        display_order: 0,
-        is_active: true,
-        item_ids: [],
-        categories: [],
-        link_url: "javascript:alert(1)",
-      }).success,
-    ).toBe(false));
-  it("blocks active empty relational sections", () =>
-    expect(
-      publishingErrors([{ section_type: "products", is_active: true, item_count: 0 }]),
-    ).toHaveLength(1));
-  it("allows inactive empty relational sections", () =>
-    expect(
-      publishingErrors([{ section_type: "products", is_active: false, item_count: 0 }]),
-    ).toHaveLength(0));
+  it("blocks empty page on publish", () => expect(pagePublishingErrors(0)).toHaveLength(1));
+  it("allows page with products on publish", () => expect(pagePublishingErrors(2)).toHaveLength(0));
 });

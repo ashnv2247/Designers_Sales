@@ -4,7 +4,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { Btn, Field, Panel, SelectInput, TextArea, TextInput } from "@/components/admin/ui";
+import { Btn, Field, SelectInput, TextArea, TextInput } from "@/components/admin/ui";
+import { AdminModal } from "@/components/admin/AdminModal";
 import {
   adminCreateSale,
   adminDeleteSale,
@@ -13,6 +14,10 @@ import {
   adminListSales,
 } from "@/lib/admin-content.functions";
 import { CloudinaryImageUploader } from "@/components/admin/CloudinaryImageUploader";
+import {
+  SalePricingManager,
+  type SaleProductFormValue,
+} from "@/components/admin/SalePricingManager";
 
 export const Route = createFileRoute("/_authenticated/admin/sales")({
   head: () => ({
@@ -53,27 +58,7 @@ function SaleForm({
 
   const [merchantId, setMerchantId] = useState(sale?.merchant_id ?? "");
 
-  // sale.sale_variants maps to product_variants. product_variants has product_id.
-  const initialProductIds = sale?.sale_variants
-    ? Array.from(new Set(sale.sale_variants.map((sv: any) => sv.product_variants?.product_id).filter(Boolean)))
-    : [];
-  const [selectedProductIds, setSelectedProductIds] = useState<string[]>(initialProductIds as string[]);
-
-  const [searchQuery, setSearchQuery] = useState("");
-
-  const filteredProducts = products.filter((p: any) => !merchantId || p.merchant_id === merchantId);
-
-  const searchedProducts = filteredProducts.filter((p: any) =>
-    p.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const toggleProduct = (productId: string) => {
-    setSelectedProductIds((prev) =>
-      prev.includes(productId)
-        ? prev.filter((id) => id !== productId)
-        : [...prev, productId]
-    );
-  };
+  const [saleProducts, setSaleProducts] = useState<SaleProductFormValue[]>([]);
 
   return (
     <form
@@ -91,7 +76,7 @@ function SaleForm({
           ends_at: String(f.get("ends_at") ?? ""),
           is_active: f.get("is_active") === "on",
           is_featured: f.get("is_featured") === "on",
-          product_ids: selectedProductIds,
+          products: saleProducts,
         });
       }}
     >
@@ -104,7 +89,6 @@ function SaleForm({
           value={merchantId}
           onChange={(e) => {
             setMerchantId(e.target.value);
-            setSelectedProductIds([]);
           }}
         >
           <option value="">All merchants</option>
@@ -132,7 +116,7 @@ function SaleForm({
       <div className="md:col-span-2">
         <CloudinaryImageUploader
           label="Banner image"
-          folder="sales"
+          entityType="sale"
           value={banner.url}
           publicId={banner.publicId}
           onChange={(v) => setBanner({ url: v?.url ?? "", publicId: v?.publicId ?? "" })}
@@ -144,53 +128,12 @@ function SaleForm({
         </Field>
       </div>
 
-      <div className="md:col-span-2 border border-border rounded p-4 bg-muted/20">
-        <span className="block text-xs font-semibold uppercase tracking-[0.16em] mb-3">Products in this Sale</span>
-        <div className="flex gap-4 mb-4">
-          <input
-            type="text"
-            placeholder="Search products..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="flex-1 rounded border bg-background px-3 py-1.5 text-sm"
-          />
-          <button
-            type="button"
-            onClick={() => setSelectedProductIds(filteredProducts.map((p) => p.id))}
-            className="rounded border px-3 py-1.5 text-xs font-medium hover:bg-muted cursor-pointer"
-          >
-            Select All
-          </button>
-          <button
-            type="button"
-            onClick={() => setSelectedProductIds([])}
-            className="rounded border px-3 py-1.5 text-xs font-medium hover:bg-muted cursor-pointer"
-          >
-            Clear All
-          </button>
-        </div>
-
-        <div className="max-h-60 overflow-y-auto border border-border rounded bg-background p-2 space-y-1.5">
-          {searchedProducts.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-4">No products found</p>
-          ) : (
-            searchedProducts.map((p: any) => (
-              <label key={p.id} className="flex items-center gap-3 p-1.5 rounded hover:bg-muted/40 cursor-pointer text-sm">
-                <input
-                  type="checkbox"
-                  checked={selectedProductIds.includes(p.id)}
-                  onChange={() => toggleProduct(p.id)}
-                  className="rounded text-primary focus:ring-primary h-4 w-4"
-                />
-                <span>{p.name}</span>
-              </label>
-            ))
-          )}
-        </div>
-        <p className="mt-2.5 text-xs text-muted-foreground">
-          Selected {selectedProductIds.length} of {filteredProducts.length} products.
-        </p>
-      </div>
+      <SalePricingManager
+        products={products}
+        existing={sale?.sale_products ?? []}
+        merchantId={merchantId}
+        onChange={setSaleProducts}
+      />
 
       <div className="flex items-center gap-6 md:col-span-2">
         <label className="flex items-center gap-2 text-[0.62rem] uppercase tracking-[0.18em] text-muted-foreground">
@@ -223,7 +166,7 @@ function AdminSales() {
   const getRefs = useServerFn(adminGetRefs);
   const qc = useQueryClient();
   const [showNew, setShowNew] = useState(false);
-  const [openId, setOpenId] = useState<string | null>(null);
+  const [editingSale, setEditingSale] = useState<any | null>(null);
 
   const { data, isPending, error } = useQuery({
     queryKey: ["admin-sales"],
@@ -249,7 +192,7 @@ function AdminSales() {
     mutationFn: (v: any) => edit({ data: v }),
     onSuccess: () => {
       toast.success("Sale saved");
-      setOpenId(null);
+      setEditingSale(null);
       invalidate();
     },
     onError: (e: Error) => toast.error(e.message || "Could not save that sale"),
@@ -270,21 +213,47 @@ function AdminSales() {
 
   return (
     <>
-      <div className="mb-8">
-        <Btn onClick={() => setShowNew((v) => !v)}>{showNew ? "Close" : "New sale"}</Btn>
+      <div className="mb-8 flex justify-between items-center">
+        <h2 className="text-lg font-serif">Sale Events</h2>
+        <Btn onClick={() => setShowNew(true)}>+ New sale</Btn>
       </div>
 
-      {showNew && (
-        <Panel title="New sale">
+      {/* Create Sale Modal */}
+      <AdminModal
+        open={showNew}
+        onOpenChange={setShowNew}
+        title="Create New Sale Event"
+        description="Schedule a promotional clearance or event for products and merchants."
+      >
+        <SaleForm
+          merchants={merchants}
+          products={products}
+          onSubmit={(v) => createMut.mutate(v)}
+          pending={createMut.isPending}
+          submitLabel="Create Sale Event"
+        />
+      </AdminModal>
+
+      {/* Edit Sale Modal */}
+      <AdminModal
+        open={Boolean(editingSale)}
+        onOpenChange={(open) => {
+          if (!open) setEditingSale(null);
+        }}
+        title={`Edit Sale — ${editingSale?.name ?? ""}`}
+        description="Update sale dates, featured status, and included products."
+      >
+        {editingSale && (
           <SaleForm
+            sale={editingSale}
             merchants={merchants}
             products={products}
-            onSubmit={(v) => createMut.mutate(v)}
-            pending={createMut.isPending}
-            submitLabel="Create sale"
+            onSubmit={(v) => editMut.mutate({ id: editingSale.id, ...v })}
+            pending={editMut.isPending}
+            submitLabel="Save Changes"
           />
-        </Panel>
-      )}
+        )}
+      </AdminModal>
 
       {(data as any[]).length === 0 && (
         <p className="text-sm text-muted-foreground">No sales yet.</p>
@@ -295,16 +264,16 @@ function AdminSales() {
           <li key={s.id} className="border-b border-border py-5">
             <div className="grid gap-4 md:grid-cols-[1fr_auto] md:items-center">
               <div>
-                <p className="text-sm">{s.name}</p>
+                <p className="text-sm font-medium">{s.name}</p>
                 <p className="mt-1 text-xs text-muted-foreground">
                   {s.merchants?.name ?? "All merchants"} · {s.is_active ? "Active" : "Inactive"}
                   {s.ends_at ? ` · ends ${new Date(s.ends_at).toLocaleDateString()}` : ""}
-                  {s.sale_variants?.length > 0 && ` · ${Array.from(new Set(s.sale_variants.map((sv: any) => sv.product_variants?.product_id))).length} products`}
+                  {s.sale_products?.length > 0 && ` · ${s.sale_products.length} products`}
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-4">
-                <Btn variant="ghost" onClick={() => setOpenId(openId === s.id ? null : s.id)}>
-                  {openId === s.id ? "Close" : "Edit"}
+                <Btn variant="ghost" onClick={() => setEditingSale(s)}>
+                  Edit
                 </Btn>
                 <Btn
                   variant="danger"
@@ -316,18 +285,6 @@ function AdminSales() {
                 </Btn>
               </div>
             </div>
-            {openId === s.id && (
-              <div className="mt-6 border-t border-dashed border-border pt-6">
-                <SaleForm
-                  sale={s}
-                  merchants={merchants}
-                  products={products}
-                  onSubmit={(v) => editMut.mutate({ id: s.id, ...v })}
-                  pending={editMut.isPending}
-                  submitLabel="Save sale"
-                />
-              </div>
-            )}
           </li>
         ))}
       </ul>

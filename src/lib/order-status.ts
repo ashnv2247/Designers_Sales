@@ -9,7 +9,8 @@ export const STATUS_LABEL: Record<string, string> = {
 };
 
 export const STATUS_NOTE: Record<string, string> = {
-  confirmed: "Your order is confirmed. Our client team will be in touch with settlement details shortly.",
+  confirmed:
+    "Your order is confirmed. Our client team will be in touch with settlement details shortly.",
   preparing: "Your pieces are being authenticated and prepared in signature packaging.",
   in_transit: "On its way. Tracking details have been sent to your email.",
   delivered: "Delivered. Returns are accepted within 14 days on unworn pieces.",

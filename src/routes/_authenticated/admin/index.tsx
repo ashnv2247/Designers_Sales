@@ -17,7 +17,14 @@ import {
   YAxis,
 } from "recharts";
 
-import { Card, ErrorState, LoadingSkeleton, MetricCard, PageHeader, StatusBadge } from "@/components/admin/kit";
+import {
+  Card,
+  ErrorState,
+  LoadingSkeleton,
+  MetricCard,
+  PageHeader,
+  StatusBadge,
+} from "@/components/admin/kit";
 import { getAdminDashboard } from "@/lib/admin-dashboard.functions";
 import {
   formatDate,
@@ -32,9 +39,15 @@ export const Route = createFileRoute("/_authenticated/admin/")({
   head: () => ({
     meta: [
       { title: "Admin Dashboard | DesignerSale" },
-      { name: "description", content: "Live revenue, orders, catalogue and merchant health for DesignerSale." },
+      {
+        name: "description",
+        content: "Live revenue, orders, catalogue and merchant health for DesignerSale.",
+      },
       { property: "og:title", content: "Admin Dashboard | DesignerSale" },
-      { property: "og:description", content: "Live marketplace analytics for DesignerSale administrators." },
+      {
+        property: "og:description",
+        content: "Live marketplace analytics for DesignerSale administrators.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -62,7 +75,8 @@ function Dashboard() {
 
   const { data, isPending, error, refetch } = useQuery({
     queryKey: ["admin-dashboard", range, from, to],
-    queryFn: () => fetchDashboard({ data: { range, from: from || undefined, to: to || undefined } }),
+    queryFn: () =>
+      fetchDashboard({ data: { range, from: from || undefined, to: to || undefined } }),
   });
 
   const c = data?.cards;
@@ -120,13 +134,26 @@ function Dashboard() {
       {data && c && (
         <div className="space-y-6">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
-            <MetricCard label="Revenue" value={money(c.revenueCents)} hint="Excludes cancelled orders" accent />
+            <MetricCard
+              label="Revenue"
+              value={money(c.revenueCents)}
+              hint="Excludes cancelled orders"
+              accent
+            />
             <MetricCard label="Total orders" value={c.totalOrders} />
             <MetricCard label="Orders today" value={c.ordersToday} />
-            <MetricCard label="Pending orders" value={c.pendingOrders} hint="Confirmed or preparing" />
+            <MetricCard
+              label="Pending orders"
+              value={c.pendingOrders}
+              hint="Confirmed or preparing"
+            />
             <MetricCard label="Delivered" value={c.deliveredOrders} />
             <MetricCard label="Cancelled" value={c.cancelledOrders} />
-            <MetricCard label="Products" value={c.totalProducts} hint={`${c.publishedProducts} published`} />
+            <MetricCard
+              label="Products"
+              value={c.totalProducts}
+              hint={`${c.publishedProducts} published`}
+            />
             <MetricCard label="Draft products" value={c.draftProducts} />
             <MetricCard label="Sold out" value={c.soldOutProducts} />
             <MetricCard
@@ -134,7 +161,11 @@ function Dashboard() {
               value={c.lowStockVariants}
               hint={`At or below ${LOW_STOCK_THRESHOLD}`}
             />
-            <MetricCard label="Merchants" value={c.totalMerchants} hint={`${c.pendingMerchants} pending`} />
+            <MetricCard
+              label="Merchants"
+              value={c.totalMerchants}
+              hint={`${c.pendingMerchants} pending`}
+            />
             <MetricCard label="Customers" value={c.totalCustomers} />
             <MetricCard label="Active sales" value={c.activeSales} />
           </div>
@@ -148,7 +179,13 @@ function Dashboard() {
                     <XAxis dataKey="date" tick={{ fontSize: 11 }} />
                     <YAxis tick={{ fontSize: 11 }} />
                     <Tooltip />
-                    <Line type="monotone" dataKey="revenue" stroke="#0f766e" strokeWidth={2} dot={false} />
+                    <Line
+                      type="monotone"
+                      dataKey="revenue"
+                      stroke="#0f766e"
+                      strokeWidth={2}
+                      dot={false}
+                    />
                   </LineChart>
                 </ResponsiveContainer>
               </ChartFrame>
@@ -173,7 +210,10 @@ function Dashboard() {
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
-                      data={data.ordersByStatus.map((s) => ({ name: humanStatus(s.status), value: s.value }))}
+                      data={data.ordersByStatus.map((s) => ({
+                        name: humanStatus(s.status),
+                        value: s.value,
+                      }))}
                       dataKey="value"
                       nameKey="name"
                       outerRadius={90}
@@ -193,7 +233,10 @@ function Dashboard() {
               <ChartFrame empty={data.productsByStatus.length === 0}>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
-                    data={data.productsByStatus.map((s) => ({ name: humanStatus(s.status), value: s.value }))}
+                    data={data.productsByStatus.map((s) => ({
+                      name: humanStatus(s.status),
+                      value: s.value,
+                    }))}
                     layout="vertical"
                   >
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
@@ -208,7 +251,9 @@ function Dashboard() {
 
             <Card title="Top-selling products">
               {data.topProducts.length === 0 ? (
-                <p className="py-8 text-center text-sm text-muted-foreground">No sales in this period.</p>
+                <p className="py-8 text-center text-sm text-muted-foreground">
+                  No sales in this period.
+                </p>
               ) : (
                 <ul className="divide-y divide-border text-sm">
                   {data.topProducts.map((p) => (
@@ -228,7 +273,9 @@ function Dashboard() {
 
             <Card title="Low-stock overview">
               {data.lowStock.length === 0 ? (
-                <p className="py-8 text-center text-sm text-muted-foreground">Stock levels are healthy.</p>
+                <p className="py-8 text-center text-sm text-muted-foreground">
+                  Stock levels are healthy.
+                </p>
               ) : (
                 <ul className="divide-y divide-border text-sm">
                   {data.lowStock.map((v) => (
@@ -275,7 +322,9 @@ function Dashboard() {
 
             <Card title="Pending merchant approvals">
               {data.pendingMerchantList.length === 0 ? (
-                <p className="py-6 text-center text-sm text-muted-foreground">Nothing awaiting approval.</p>
+                <p className="py-6 text-center text-sm text-muted-foreground">
+                  Nothing awaiting approval.
+                </p>
               ) : (
                 <ul className="divide-y divide-border text-sm">
                   {data.pendingMerchantList.map((m: any) => (
@@ -311,7 +360,9 @@ function Dashboard() {
                   {data.recentCustomers.map((u: any) => (
                     <li key={u.id} className="py-2">
                       <p className="truncate">{u.display_name || u.email || "Unnamed"}</p>
-                      <p className="text-xs text-muted-foreground">Joined {formatDate(u.created_at)}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Joined {formatDate(u.created_at)}
+                      </p>
                     </li>
                   ))}
                 </ul>

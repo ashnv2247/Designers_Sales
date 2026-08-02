@@ -4,7 +4,8 @@ import { z } from "zod";
 import sanitizeHtml from "sanitize-html";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assertAdmin } from "@/lib/admin-guard.server";
-import { curatedPageSchema, curatedSectionSchema, publishingErrors } from "./curated-pages.schemas";
+import { curatedPageSchema } from "./curated-pages.schemas";
+import { withNormalizedOptions } from "./product-options";
 
 const uuid = z.string().uuid();
 const cleanHtml = (value: string | null) =>
@@ -70,7 +71,7 @@ export const adminListCuratedPages = createServerFn({ method: "GET" })
     await assertAdmin(context as any);
     let q = context.supabase
       .from("curated_pages")
-      .select("*, curated_sections(count)", { count: "exact" })
+      .select("*, curated_page_products(count)", { count: "exact" })
       .order(data.sort, { ascending: data.direction === "asc" });
     if (data.title) q = q.ilike("title", `%${data.title}%`);
     if (data.slug) q = q.ilike("slug", `%${data.slug}%`);
@@ -85,13 +86,13 @@ export const adminListCuratedPages = createServerFn({ method: "GET" })
     return { rows: rows ?? [], count: count ?? 0, page: data.page, pageSize: data.pageSize };
   });
 
-const detailSelect = `*, curated_sections(*,
-  curated_section_products(*, products(id,name,status,merchant_id,brand_id,category_id,merchants(name),brands(name),categories(name),product_images(image_url,display_order),product_variants(stock_quantity))),
-  curated_section_sales(*, sales(id,name,banner_image_url,starts_at,ends_at,is_active,is_featured,merchants(name))),
-  curated_section_merchants(*, merchants(id,name,logo_url,status,is_active,is_featured,products(count))),
-  curated_section_categories(*, categories(id,name,slug,parent_id,image_url)),
-  curated_section_blog_posts(*, blog_posts(id,title,featured_image_url,status,published_at,blog_categories(name)))
-)`;
+const detailSelect = `*, curated_page_products(*, products(
+  id, name, status, merchant_id, brand_id, category_id,
+  merchants(name), brands(name), categories(name),
+  original_price, discounted_price, currency,
+  product_variants(color_name,color_hex,size,stock_quantity,original_price,discounted_price,is_active),
+  product_images(color_name,image_url,image_public_id,is_primary,display_order)
+))`;
 
 export const adminGetCuratedPage = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -104,7 +105,11 @@ export const adminGetCuratedPage = createServerFn({ method: "GET" })
       .eq("id", data.id)
       .single();
     if (error) throw new Error(error.message);
-    row.curated_sections?.sort((a: any, b: any) => a.display_order - b.display_order);
+    row.curated_page_products?.sort((a: any, b: any) => a.display_order - b.display_order);
+    row.curated_page_products = row.curated_page_products?.map((item: any) => ({
+      ...item,
+      products: item.products ? withNormalizedOptions(item.products) : null,
+    }));
     return row;
   });
 
@@ -125,6 +130,8 @@ export const adminCheckCuratedSlug = createServerFn({ method: "GET" })
     return { available: count === 0 };
   });
 
+import { pagePublishingErrors } from "./curated-pages.schemas";
+
 export const adminSaveCuratedPage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => curatedPageSchema.extend({ id: uuid.optional() }).parse(d))
@@ -132,34 +139,16 @@ export const adminSaveCuratedPage = createServerFn({ method: "POST" })
     await assertAdmin(context as any);
     const { id, ...input } = data;
     if (input.status === "published") {
-      const sections: any[] = [];
+      let productCount = 0;
       if (id) {
-        const { data: found, error: se } = await context.supabase
-          .from("curated_sections")
-          .select("id,section_type,is_active")
+        const { count, error: countError } = await context.supabase
+          .from("curated_page_products")
+          .select("*", { head: true, count: "exact" })
           .eq("curated_page_id", id);
-        if (se) throw new Error(se.message);
-        sections.push(...(found ?? []));
+        if (countError) throw new Error(countError.message);
+        productCount = count ?? 0;
       }
-      for (const section of sections ?? []) {
-        const table = (
-          {
-            products: "curated_section_products",
-            sales: "curated_section_sales",
-            merchants: "curated_section_merchants",
-            categories: "curated_section_categories",
-            blog_posts: "curated_section_blog_posts",
-          } as Record<string, string>
-        )[section.section_type];
-        if (table && section.is_active) {
-          const { count } = await (context.supabase as any)
-            .from(table)
-            .select("*", { head: true, count: "exact" })
-            .eq("section_id", section.id);
-          (section as any).item_count = count ?? 0;
-        }
-      }
-      const errors = publishingErrors(sections ?? []);
+      const errors = pagePublishingErrors(productCount);
       if (errors.length) throw new Error(errors.join(". "));
       if (!input.published_at) input.published_at = new Date().toISOString();
     }
@@ -204,103 +193,41 @@ export const adminDeleteCuratedPage = createServerFn({ method: "POST" })
     await assertAdmin(context as any);
     const { data: page } = await context.supabase
       .from("curated_pages")
-      .select(
-        "hero_image_public_id,mobile_hero_image_public_id,curated_sections(image_public_id,mobile_image_public_id)",
-      )
+      .select("hero_image_public_id,mobile_hero_image_public_id")
       .eq("id", data.id)
       .single();
     const { error } = await context.supabase.from("curated_pages").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
-    await cleanup(context, [
-      page?.hero_image_public_id,
-      page?.mobile_hero_image_public_id,
-      ...(page?.curated_sections ?? []).flatMap((s: any) => [
-        s.image_public_id,
-        s.mobile_image_public_id,
-      ]),
-    ]);
+    await cleanup(context, [page?.hero_image_public_id, page?.mobile_hero_image_public_id]);
     return { ok: true };
   });
 
-export const adminSaveCuratedSection = createServerFn({ method: "POST" })
+export const adminSaveCuratedPageProducts = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => curatedSectionSchema.parse(d))
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        pageId: uuid,
+        productIds: z.array(uuid),
+      })
+      .parse(d),
+  )
   .handler(async ({ data, context }) => {
     await assertAdmin(context as any);
-    const { id, item_ids, categories, ...section } = data;
-    if (section.section_type === "editorial") section.content = cleanHtml(section.content);
-    let previous: any = null;
-    if (id) {
-      const { data: old } = await context.supabase
-        .from("curated_sections")
-        .select("image_url,mobile_image_url,image_public_id,mobile_image_public_id")
-        .eq("id", id)
-        .single();
-      previous = old;
-    }
-    const query = id
-      ? context.supabase.from("curated_sections").update(section).eq("id", id)
-      : context.supabase.from("curated_sections").insert(section);
-    const { data: row, error } = await query.select("id").single();
-    if (error) throw new Error(error.message);
-    const sectionId = row.id;
-    const config = (
-      {
-        products: ["curated_section_products", "product_id"],
-        sales: ["curated_section_sales", "sale_id"],
-        merchants: ["curated_section_merchants", "merchant_id"],
-        blog_posts: ["curated_section_blog_posts", "blog_post_id"],
-      } as Record<string, string[]>
-    )[section.section_type];
-    if (config) {
-      const [table, key] = config;
-      const dynamic = context.supabase as any;
-      const { error: del } = await dynamic.from(table).delete().eq("section_id", sectionId);
-      if (del) throw new Error(del.message);
-      if (item_ids.length) {
-        const { error: ins } = await dynamic
-          .from(table)
-          .insert(item_ids.map((x, i) => ({ section_id: sectionId, [key]: x, display_order: i })));
-        if (ins) throw new Error(ins.message);
-      }
-    }
-    if (section.section_type === "categories") {
-      const { error: del } = await context.supabase
-        .from("curated_section_categories")
-        .delete()
-        .eq("section_id", sectionId);
-      if (del) throw new Error(del.message);
-      if (categories.length) {
-        const { error: ins } = await context.supabase.from("curated_section_categories").insert(
-          categories.map((x, i) => ({
-            section_id: sectionId,
-            category_id: x.id,
-            custom_title: x.custom_title || null,
-            custom_image_url: x.custom_image_url || null,
-            custom_image_public_id: x.custom_image_public_id || null,
-            display_order: i,
-          })),
+    const { pageId, productIds } = data;
+    const { error: del } = await context.supabase
+      .from("curated_page_products")
+      .delete()
+      .eq("curated_page_id", pageId);
+    if (del) throw new Error(del.message);
+    if (productIds.length) {
+      const { error: ins } = await context.supabase
+        .from("curated_page_products")
+        .insert(
+          productIds.map((x, i) => ({ curated_page_id: pageId, product_id: x, display_order: i })),
         );
-        if (ins) throw new Error(ins.message);
-      }
+      if (ins) throw new Error(ins.message);
     }
-    if (previous)
-      await cleanup(context, [
-        previous.image_public_id !== section.image_public_id ? previous.image_public_id : null,
-        previous.mobile_image_public_id !== section.mobile_image_public_id
-          ? previous.mobile_image_public_id
-          : null,
-      ]);
-    return { id: sectionId };
-  });
-
-export const adminDeleteCuratedSection = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ id: uuid }).parse(d))
-  .handler(async ({ data, context }) => {
-    await assertAdmin(context as any);
-    const { error } = await context.supabase.from("curated_sections").delete().eq("id", data.id);
-    if (error) throw new Error(error.message);
     return { ok: true };
   });
 
@@ -318,19 +245,6 @@ export const adminDuplicateCuratedPage = rpcFn(
   "duplicate_curated_page",
   z.object({ _page_id: uuid }),
 );
-export const adminDuplicateCuratedSection = rpcFn(
-  "duplicate_curated_section",
-  z.object({ _section_id: uuid }),
-);
-export const adminReorderCuratedSections = rpcFn(
-  "reorder_curated_sections",
-  z.object({ _page_id: uuid, _ordered_ids: z.array(uuid) }),
-);
-export const adminReorderCuratedItems = rpcFn(
-  "reorder_curated_items",
-  z.object({ _section_id: uuid, _kind: z.string(), _ordered_ids: z.array(uuid) }),
-);
-
 export const adminCuratedSelectors = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
@@ -351,7 +265,7 @@ export const adminCuratedSelectors = createServerFn({ method: "GET" })
       q = context.supabase
         .from("products")
         .select(
-          "id,name,status,merchant_id,brand_id,category_id,merchants(name),brands(name),categories(name),product_images(image_url,display_order),product_variants(stock_quantity)",
+          "id,name,status,merchant_id,brand_id,category_id,merchants(name),brands(name),categories(name),product_variants(color_name,color_hex,size,stock_quantity,original_price,discounted_price,is_active),product_images(color_name,image_url,image_public_id,is_primary,display_order)",
           { count: "exact" },
         );
       if (!data.includeDrafts) q = q.in("status", ["published", "sold_out"]);
@@ -359,7 +273,7 @@ export const adminCuratedSelectors = createServerFn({ method: "GET" })
       q = context.supabase
         .from("sales")
         .select(
-          "id,name,banner_image_url,start_date,end_date,is_active,is_featured,merchants(name)",
+          "id,name,banner_image_url,starts_at,ends_at,is_active,is_featured,merchants(name)",
           { count: "exact" },
         );
     else if (data.kind === "merchants")
@@ -383,5 +297,7 @@ export const adminCuratedSelectors = createServerFn({ method: "GET" })
     if (data.search) q = q.ilike(data.kind === "blog_posts" ? "title" : "name", `%${data.search}%`);
     const { data: rows, error, count } = await q.range(from, from + 29);
     if (error) throw new Error(error.message);
-    return { rows: rows ?? [], count: count ?? 0 };
+    const rowsWithOptions =
+      data.kind === "products" ? (rows ?? []).map(withNormalizedOptions) : (rows ?? []);
+    return { rows: rowsWithOptions, count: count ?? 0 };
   });

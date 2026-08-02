@@ -17,7 +17,10 @@ export const Route = createFileRoute("/_authenticated/orders/")({
         content: "Follow every DesignerSale order from confirmation through to delivery.",
       },
       { property: "og:title", content: "Your Orders | DesignerSale" },
-      { property: "og:description", content: "Track your DesignerSale orders and delivery status." },
+      {
+        property: "og:description",
+        content: "Track your DesignerSale orders and delivery status.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -27,7 +30,10 @@ export const Route = createFileRoute("/_authenticated/orders/")({
 
 function OrdersPage() {
   const fetchOrders = useServerFn(listOrders);
-  const { data, isPending, error } = useQuery({ queryKey: ["orders"], queryFn: () => fetchOrders({}) });
+  const { data, isPending, error } = useQuery({
+    queryKey: ["orders"],
+    queryFn: () => fetchOrders({}),
+  });
 
   return (
     <>

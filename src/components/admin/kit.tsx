@@ -55,7 +55,15 @@ export function PageHeader({
   );
 }
 
-export function Card({ title, actions, children }: { title?: string; actions?: ReactNode; children: ReactNode }) {
+export function Card({
+  title,
+  actions,
+  children,
+}: {
+  title?: string;
+  actions?: ReactNode;
+  children: ReactNode;
+}) {
   return (
     <section className="rounded-lg border border-border bg-card shadow-sm">
       {(title || actions) && (
@@ -103,7 +111,7 @@ export function LoadingSkeleton({ rows = 6 }: { rows?: number }) {
   return (
     <div className="space-y-2 py-2">
       {Array.from({ length: rows }).map((_, i) => (
-        <div key={i} className="h-10 animate-pulse rounded-md bg-muted" />
+        <div key={i} className="skeleton-shimmer h-10 rounded-md" />
       ))}
     </div>
   );

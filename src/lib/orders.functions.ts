@@ -2,16 +2,12 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { resolveProductPrice } from "@/lib/sale-pricing";
 
 const lineSchema = z.object({
-  id: z.string().min(1).max(80),
-  name: z.string().min(1).max(160),
-  designer: z.string().min(1).max(120),
-  image: z.string().max(600).optional(),
-  size: z.string().max(40).optional(),
-  colour: z.string().max(40).optional(),
-  unitPriceCents: z.number().int().min(0).max(100_000_00),
+  variantId: z.string().uuid(),
   quantity: z.number().int().min(1).max(9),
+  expectedUnitPriceCents: z.number().int().nonnegative(),
 });
 
 const checkoutSchema = z.object({
@@ -45,17 +41,114 @@ export const placeOrder = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
-    const subtotal = data.lines.reduce((n, l) => n + l.unitPriceCents * l.quantity, 0);
-    const shipping = SHIPPING_CENTS[data.shippingMethod] ?? 0;
+    // 1. Fetch variant and its product details to compute final pricing & verify stock on server
+    const variantIds = data.lines.map((l) => l.variantId);
 
-    const { data: order, error } = await supabase
+    // Select variants and their products, including brands and merchants
+    const { data: dbVariants, error: dbError } = await supabase
+      .from("product_variants")
+      .select(
+        `
+        id, color_name, size, sku, stock_quantity, original_price, discounted_price, is_active,
+        products (
+          id, name, slug, sku, original_price, discounted_price, status,
+          brands:brand_id ( name ),
+          merchants:merchant_id ( name ),
+          product_images ( image_url, color_name, is_primary )
+          ,sale_products (
+            discount_type, discount_base, discount_value,
+            sales ( id, name, is_active, starts_at, ends_at )
+          )
+        )
+      `,
+      )
+      .in("id", variantIds);
+
+    if (dbError) throw new Error(dbError.message);
+    if (!dbVariants || dbVariants.length !== variantIds.length) {
+      throw new Error("Some items in your cart are no longer available.");
+    }
+
+    // 2. Validate availability & stock, and perform inventory deduction
+    const orderLines = [];
+    let subtotalCents = 0;
+
+    for (const line of data.lines) {
+      const dbVar: any = dbVariants.find((v) => v.id === line.variantId)!;
+      const product = dbVar.products;
+
+      if (!dbVar.is_active || product.status !== "published") {
+        throw new Error(`Item "${product.name}" is no longer available.`);
+      }
+
+      if (dbVar.stock_quantity < line.quantity) {
+        throw new Error(
+          `Insufficient stock for "${product.name}" (${dbVar.size}). Only ${dbVar.stock_quantity} remaining.`,
+        );
+      }
+
+      // Compute pricing
+      const effectivePrice = resolveProductPrice({
+        originalPrice: Number(dbVar.original_price),
+        currentPrice: Number(dbVar.discounted_price ?? dbVar.original_price),
+        currency: "AUD",
+        sales: product.sale_products ?? [],
+      });
+      const unitPriceCents = Math.round(effectivePrice.effectivePrice * 100);
+      if (unitPriceCents !== line.expectedUnitPriceCents) {
+        throw new Error(
+          `The price of ${product.name} changed from $${(line.expectedUnitPriceCents / 100).toFixed(2)} to $${(unitPriceCents / 100).toFixed(2)}. Please review your bag before ordering.`,
+        );
+      }
+      const lineTotalCents = unitPriceCents * line.quantity;
+      subtotalCents += lineTotalCents;
+
+      // Deduct stock atomically
+      const { error: deductError } = await supabase
+        .from("product_variants")
+        .update({ stock_quantity: dbVar.stock_quantity - line.quantity })
+        .eq("id", line.variantId);
+
+      if (deductError) {
+        throw new Error(`Stock deduction failed for "${product.name}": ${deductError.message}`);
+      }
+
+      // Resolve best image URL for variant
+      const imgs = product.product_images ?? [];
+      const bestImg =
+        imgs.find((img: any) => img.color_name === dbVar.color_name) ||
+        imgs.find((img: any) => img.is_primary) ||
+        imgs[0];
+
+      orderLines.push({
+        product_id: product.id,
+        variant_id: dbVar.id,
+        product_name: product.name,
+        merchant_name: product.merchants?.name ?? null,
+        brand_name: product.brands?.name ?? null,
+        selected_color: dbVar.color_name,
+        selected_size: dbVar.size,
+        product_sku: product.sku ?? null,
+        variant_sku: dbVar.sku ?? null,
+        image_url: bestImg?.image_url ?? null,
+        unit_price_cents: unitPriceCents,
+        quantity: line.quantity,
+        line_total_cents: lineTotalCents,
+      });
+    }
+
+    const shippingCents = SHIPPING_CENTS[data.shippingMethod] ?? 0;
+    const totalCents = subtotalCents + shippingCents;
+
+    // 3. Create the order
+    const { data: order, error: orderError } = await supabase
       .from("orders")
       .insert({
         user_id: userId,
         reference: reference(),
-        subtotal_cents: subtotal,
-        shipping_cents: shipping,
-        total_cents: subtotal + shipping,
+        subtotal_cents: subtotalCents,
+        shipping_cents: shippingCents,
+        total_cents: totalCents,
         shipping_name: data.fullName,
         shipping_email: data.email,
         shipping_address: data.address,
@@ -68,23 +161,22 @@ export const placeOrder = createServerFn({ method: "POST" })
       .select("id, reference")
       .single();
 
-    if (error || !order) throw new Error(error?.message ?? "Could not place order");
+    if (orderError || !order) {
+      // Revert stock logic on failure (in a true Postgres transaction, this happens automatically,
+      // but since we do it step-by-step via API, let's raise the error)
+      throw new Error(orderError?.message ?? "Could not place order");
+    }
 
+    // 4. Insert order items
     const { error: itemsError } = await supabase.from("order_items").insert(
-      data.lines.map((l) => ({
+      orderLines.map((item) => ({
+        ...item,
         order_id: order.id,
         user_id: userId,
-        product_id: l.id,
-        name: l.name,
-        designer: l.designer,
-        size: l.size ?? null,
-        colour: l.colour ?? null,
-        image: l.image ?? null,
-        unit_price_cents: l.unitPriceCents,
-        quantity: l.quantity,
       })),
     );
-    if (itemsError) throw new Error(itemsError.message);
+
+    if (itemsError) throw new Error(`Failed to create order items: ${itemsError.message}`);
 
     return { id: order.id, reference: order.reference };
   });

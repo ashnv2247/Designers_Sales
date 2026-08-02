@@ -47,7 +47,8 @@ function CheckoutPage() {
     country: "Australia",
     giftNote: "",
   });
-  const [shippingMethod, setShippingMethod] = useState<(typeof SHIPPING)[number]["id"]>("signature");
+  const [shippingMethod, setShippingMethod] =
+    useState<(typeof SHIPPING)[number]["id"]>("signature");
   const [busy, setBusy] = useState(false);
 
   const shippingCents = SHIPPING.find((s) => s.id === shippingMethod)!.cents;
@@ -69,7 +70,11 @@ function CheckoutPage() {
           email: form.email || user?.email || "",
           giftNote: form.giftNote || undefined,
           shippingMethod,
-          lines: cart.lines,
+          lines: cart.lines.map((l) => ({
+            variantId: l.variantId,
+            quantity: l.quantity,
+            expectedUnitPriceCents: l.unitPriceCents,
+          })),
         },
       });
       cart.clear();
@@ -88,10 +93,20 @@ function CheckoutPage() {
         <div className="mx-auto grid max-w-[1400px] gap-14 px-5 py-16 md:px-10 lg:grid-cols-[1.25fr_0.75fr] lg:gap-24 lg:py-24">
           <form onSubmit={onSubmit} className="order-2 lg:order-1">
             <p className="rule-label text-muted-foreground">Step two of three</p>
-            <h1 className="display mt-5 text-[clamp(2.4rem,5vw,3.6rem)] leading-[1.02]">Checkout</h1>
+            <h1 className="display mt-5 text-[clamp(2.4rem,5vw,3.6rem)] leading-[1.02]">
+              Checkout
+            </h1>
 
             <Section title="Information" step="01">
-              <Field label="Full name" value={form.fullName} onChange={set("fullName")} required minLength={2} maxLength={120} autoComplete="name" />
+              <Field
+                label="Full name"
+                value={form.fullName}
+                onChange={set("fullName")}
+                required
+                minLength={2}
+                maxLength={120}
+                autoComplete="name"
+              />
               <Field
                 label="Email address"
                 type="email"
@@ -105,11 +120,39 @@ function CheckoutPage() {
             </Section>
 
             <Section title="Delivery" step="02">
-              <Field label="Street address" value={form.address} onChange={set("address")} required maxLength={240} autoComplete="street-address" />
+              <Field
+                label="Street address"
+                value={form.address}
+                onChange={set("address")}
+                required
+                maxLength={240}
+                autoComplete="street-address"
+              />
               <div className="grid gap-6 sm:grid-cols-3">
-                <Field label="City" value={form.city} onChange={set("city")} required maxLength={120} autoComplete="address-level2" />
-                <Field label="Postcode" value={form.postcode} onChange={set("postcode")} required maxLength={20} autoComplete="postal-code" />
-                <Field label="Country" value={form.country} onChange={set("country")} required maxLength={80} autoComplete="country-name" />
+                <Field
+                  label="City"
+                  value={form.city}
+                  onChange={set("city")}
+                  required
+                  maxLength={120}
+                  autoComplete="address-level2"
+                />
+                <Field
+                  label="Postcode"
+                  value={form.postcode}
+                  onChange={set("postcode")}
+                  required
+                  maxLength={20}
+                  autoComplete="postal-code"
+                />
+                <Field
+                  label="Country"
+                  value={form.country}
+                  onChange={set("country")}
+                  required
+                  maxLength={80}
+                  autoComplete="country-name"
+                />
               </div>
 
               <fieldset className="mt-2 space-y-3">
@@ -135,7 +178,9 @@ function CheckoutPage() {
                         <span className="block text-xs text-muted-foreground">{s.detail}</span>
                       </span>
                     </span>
-                    <span className="text-sm">{s.cents === 0 ? "Complimentary" : money(s.cents)}</span>
+                    <span className="text-sm">
+                      {s.cents === 0 ? "Complimentary" : money(s.cents)}
+                    </span>
                   </label>
                 ))}
               </fieldset>
@@ -143,8 +188,8 @@ function CheckoutPage() {
 
             <Section title="Payment" step="03">
               <p className="text-xs leading-relaxed text-muted-foreground">
-                This boutique runs on invoice settlement: place the order and our client team will send a
-                secure payment link within the hour. No card details are collected here.
+                This boutique runs on invoice settlement: place the order and our client team will
+                send a secure payment link within the hour. No card details are collected here.
               </p>
               <Field
                 label="Gift note (optional)"
@@ -167,14 +212,17 @@ function CheckoutPage() {
             <div className="border border-border bg-background p-7">
               <div className="flex items-baseline justify-between">
                 <h2 className="rule-label text-muted-foreground">Shopping bag</h2>
-                <Link to="/cart" className="link-underline text-[0.62rem] uppercase tracking-[0.2em]">
+                <Link
+                  to="/cart"
+                  className="link-underline text-[0.62rem] uppercase tracking-[0.2em]"
+                >
                   Edit
                 </Link>
               </div>
 
               <ul className="mt-6 space-y-5">
                 {cart.lines.map((l) => (
-                  <li key={`${l.id}-${l.size}`} className="flex gap-4">
+                  <li key={l.variantId} className="flex gap-4">
                     <img src={l.image} alt={l.name} className="h-24 w-18 w-[4.5rem] object-cover" />
                     <div className="flex flex-1 flex-col justify-between">
                       <div>
@@ -207,6 +255,51 @@ function CheckoutPage() {
                   <dd className="text-lg">{money(total)}</dd>
                 </div>
               </dl>
+
+              {/* Trust Badge Section */}
+              <div className="mt-8 border-t border-border pt-6 space-y-4">
+                <p className="text-[0.62rem] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                  Shop With Confidence
+                </p>
+                <ul className="space-y-4 text-xs text-muted-foreground">
+                  <li className="flex items-start gap-3">
+                    <span className="text-forest text-sm font-bold">✓</span>
+                    <div>
+                      <p className="font-semibold text-foreground">Secure SSL Protected Payment</p>
+                      <p className="text-[0.7rem] text-muted-foreground mt-0.5">
+                        Your checkout transactions are encrypted and secure.
+                      </p>
+                    </div>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="text-forest text-sm font-bold">✓</span>
+                    <div>
+                      <p className="font-semibold text-foreground">100% Authenticity Guaranteed</p>
+                      <p className="text-[0.7rem] text-muted-foreground mt-0.5">
+                        Every clearance item is inspected in-house by luxury buyers.
+                      </p>
+                    </div>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="text-forest text-sm font-bold">✓</span>
+                    <div>
+                      <p className="font-semibold text-foreground">Easy Boutique Returns</p>
+                      <p className="text-[0.7rem] text-muted-foreground mt-0.5">
+                        Complimentary returns on all orders within 14 days.
+                      </p>
+                    </div>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="text-forest text-sm font-bold">✓</span>
+                    <div>
+                      <p className="font-semibold text-foreground">Australian Boutique Network</p>
+                      <p className="text-[0.7rem] text-muted-foreground mt-0.5">
+                        Dispatched directly from the country's leading designers.
+                      </p>
+                    </div>
+                  </li>
+                </ul>
+              </div>
             </div>
           </aside>
         </div>
@@ -215,7 +308,15 @@ function CheckoutPage() {
   );
 }
 
-function Section({ title, step, children }: { title: string; step: string; children: React.ReactNode }) {
+function Section({
+  title,
+  step,
+  children,
+}: {
+  title: string;
+  step: string;
+  children: React.ReactNode;
+}) {
   return (
     <section className="mt-12 border-t border-border pt-8">
       <div className="flex items-baseline gap-4">

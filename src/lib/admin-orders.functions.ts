@@ -91,7 +91,9 @@ export const adminOrderDetail = createServerFn({ method: "GET" })
 export const adminSetOrderStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
-    z.object({ ids: z.array(z.string().uuid()).min(1).max(200), status: z.enum(ORDER_STATUS) }).parse(d),
+    z
+      .object({ ids: z.array(z.string().uuid()).min(1).max(200), status: z.enum(ORDER_STATUS) })
+      .parse(d),
   )
   .handler(async ({ data, context }) => {
     await assertAdmin(context as AdminCtx);

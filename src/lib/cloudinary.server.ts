@@ -1,4 +1,9 @@
 import { v2 as cloudinary } from "cloudinary";
+import {
+  generateCloudinaryPublicId,
+  getCloudinaryFolder,
+  type CloudinaryEntityType,
+} from "./cloudinary-config";
 
 function required(name: string) {
   const value = process.env[name]?.trim();
@@ -16,17 +21,21 @@ export function configureCloudinary() {
   return cloudinary;
 }
 
-export function cloudinaryFolder() {
-  return (process.env.CLOUDINARY_UPLOAD_FOLDER || "designer-sales").replace(/^\/+|\/+$/g, "");
-}
-
-export function signCloudinaryUpload(publicId: string) {
+export function signCloudinaryUpload(input: {
+  entityType: CloudinaryEntityType;
+  entityId?: string;
+  imageId?: string;
+  fileName?: string;
+}) {
   const client = configureCloudinary();
   const timestamp = Math.floor(Date.now() / 1000);
-  const folder = cloudinaryFolder();
-  const params = { timestamp, folder, public_id: publicId, overwrite: false };
+  const folder = getCloudinaryFolder(input.entityType);
+  const publicId = generateCloudinaryPublicId(input);
+  const params = { timestamp, folder, public_id: publicId };
   return {
-    ...params,
+    timestamp,
+    folder,
+    publicId,
     signature: client.utils.api_sign_request(params, required("CLOUDINARY_API_SECRET")),
     apiKey: required("CLOUDINARY_API_KEY"),
     cloudName: required("CLOUDINARY_CLOUD_NAME"),

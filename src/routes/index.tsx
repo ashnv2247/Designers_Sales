@@ -7,9 +7,15 @@ import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { Reveal } from "@/components/Reveal";
 import { ProductCard } from "@/components/ProductCard";
-import { byCategory, catalogQuery, homepageQuery, publicCuratedPagesQuery } from "@/lib/catalog-queries";
-import { ArrowRight } from "@/components/Icons";
+import {
+  byCategory,
+  catalogQuery,
+  homepageQuery,
+  publicCuratedPagesQuery,
+} from "@/lib/catalog-queries";
+import { ArrowRight, SearchIcon } from "@/components/Icons";
 import { getCloudinaryImageUrl } from "@/lib/cloudinary-images";
+import { HomeSkeleton, ImageWithSkeleton } from "@/components/Skeleton";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -37,6 +43,7 @@ export const Route = createFileRoute("/")({
       context.queryClient.ensureQueryData(publicCuratedPagesQuery),
     ]);
   },
+  pendingComponent: HomeSkeleton,
   component: Home,
 });
 
@@ -90,8 +97,6 @@ function Home() {
       ].filter(Boolean),
     [catalogItems],
   );
-  const [scrolled, setScrolled] = useState(0);
-  const [loaded, setLoaded] = useState(false);
   const [slide, setSlide] = useState(0);
   const [paused, setPaused] = useState(false);
   const active = SLIDES[slide] ?? SLIDES[0];
@@ -99,27 +104,17 @@ function Home() {
   const activeDesigner = DESIGNERS[designerIdx] ?? DESIGNERS[0];
 
   useEffect(() => {
-    setLoaded(true);
-    const onScroll = () => setScrolled(window.scrollY);
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
-  useEffect(() => {
     if (paused) return;
     const t = setInterval(() => setSlide((s) => (s + 1) % SLIDES.length), 6000);
     return () => clearInterval(t);
   }, [paused, SLIDES.length]);
 
-  const next = () => setSlide((s) => (s + 1) % SLIDES.length);
-  const prev = () => setSlide((s) => (s - 1 + SLIDES.length) % SLIDES.length);
-
   return (
     <div className="min-h-screen bg-background">
       <Nav overlay />
 
-      <main>
-        {/* ── Hero ───────────────────────────────────────── */}
+      <main className="overflow-x-hidden">
+        {/* ── 3. Redesigned Hero Section ───────────────────────── */}
         <section
           onMouseEnter={() => setPaused(true)}
           onMouseLeave={() => setPaused(false)}
@@ -130,528 +125,739 @@ function Home() {
               "--slide-accent": active.accent,
             } as React.CSSProperties
           }
-          className="relative min-h-[100svh] overflow-hidden pt-16 text-ivory transition-[background-color] duration-[1200ms] ease-[cubic-bezier(0.22,1,0.36,1)] md:pt-20"
+          className="relative min-h-[85vh] pt-28 lg:pt-36 pb-16 flex items-center transition-[background-color] duration-[1200ms] ease-luxe text-ivory overflow-hidden origin-top"
         >
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_90%_at_15%_20%,color-mix(in_oklab,var(--slide-glow)_75%,transparent),transparent_70%)] transition-[background] duration-[1200ms]" />
-          <div className="relative mx-auto grid max-w-[1600px] items-center gap-10 px-5 pb-16 pt-10 md:px-10 lg:min-h-[calc(100svh-5rem)] lg:grid-cols-[0.95fr_1.05fr] lg:gap-20 lg:pb-0">
-            <div className="order-2 lg:order-1">
-              <p
-                className={`rule-label text-ivory/50 transition-all duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-                  loaded ? "translate-y-0 opacity-100" : "translate-y-3 opacity-0"
-                }`}
-              >
-                {active.kicker}
-              </p>
-
-              <h1 key={active.id} className="display mt-7 text-[clamp(2.9rem,6.2vw,5.6rem)]">
-                {active.lines.map((line: string, i: number) => (
-                  <span key={line + i} className="block overflow-hidden">
-                    <span
-                      style={{
-                        animationDelay: `${120 + i * 110}ms`,
-                        color: i === active.lines.length - 1 ? "var(--slide-accent)" : undefined,
-                      }}
-                      className={`block animate-[hero-line_900ms_cubic-bezier(0.22,1,0.36,1)_both] ${
-                        i === active.lines.length - 1 ? "italic" : ""
-                      }`}
-                    >
-                      {line}
-                    </span>
-                  </span>
-                ))}
-              </h1>
-
+          <div className="relative mx-auto max-w-[1600px] w-full px-5 md:px-10 grid gap-12 lg:grid-cols-12 items-center">
+            {/* Left Side: Conversion Copy */}
+            <div className="lg:col-span-6 order-2 lg:order-1 flex flex-col justify-center">
               <span
-                style={{ transitionDelay: "560ms", backgroundColor: "var(--slide-accent)" }}
-                className={`mt-8 block h-px w-24 origin-left transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-                  loaded ? "scale-x-100" : "scale-x-0"
-                }`}
-              />
-
-              <p
-                style={{ transitionDelay: "620ms" }}
-                className={`mt-7 max-w-md text-[0.95rem] leading-relaxed text-ivory/65 transition-all duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-                  loaded ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-                }`}
+                style={{
+                  color: "var(--slide-accent)",
+                  backgroundColor: "color-mix(in oklab, var(--slide-accent) 15%, transparent)",
+                  borderColor: "color-mix(in oklab, var(--slide-accent) 30%, transparent)",
+                }}
+                className="text-[0.62rem] font-bold uppercase tracking-[0.3em] px-3 py-1.5 border self-start mb-6"
               >
-                One hundred and forty boutiques. One considered place. Archive gowns, tailoring and
-                fine jewellery, reduced by up to seventy percent.
+                Luxury Clearance Marketplace
+              </span>
+              <h1 className="display text-[clamp(2.8rem,5.5vw,5.2rem)] leading-[0.92] text-ivory">
+                Designer Fashion <br />
+                <span style={{ color: "var(--slide-accent)" }} className="italic font-medium">
+                  Up To 70% Off
+                </span>
+              </h1>
+              <p className="mt-6 max-w-lg text-sm md:text-base leading-relaxed text-ivory/80">
+                Discover authentic luxury fashion from Australia's leading boutique network at
+                exclusive clearance prices. 100% authenticated, delivered to your door.
               </p>
 
-              <div
-                style={{ transitionDelay: "760ms" }}
-                className={`mt-11 flex flex-wrap gap-3 transition-all duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-                  loaded ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-                }`}
-              >
+              <div className="mt-9 flex flex-wrap gap-4">
                 <a
-                  href="#collections"
+                  href="#search-section"
                   style={{ backgroundColor: "var(--slide-accent)" }}
-                  className="inline-flex items-center gap-3 px-8 py-4 text-[0.6875rem] uppercase tracking-[0.2em] text-ink transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-0.5 hover:opacity-90"
+                  className="inline-flex items-center gap-3 px-9 py-4.5 text-[0.65rem] font-bold uppercase tracking-[0.24em] text-ink shadow-lg hover:opacity-90 transition-all duration-300 hover:-translate-y-0.5"
                 >
-                  Explore collection <ArrowRight />
+                  Shop Sale <ArrowRight />
                 </a>
-                <a
-                  href="#boutiques"
-                  className="inline-flex items-center gap-3 border border-ivory/25 px-8 py-4 text-[0.6875rem] uppercase tracking-[0.2em] text-ivory transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-0.5 hover:border-[var(--slide-accent)] hover:text-[var(--slide-accent)]"
+                <Link
+                  to="/shop/$category"
+                  params={{ category: "dresses" }}
+                  className="inline-flex items-center gap-3 border border-ivory/20 bg-ivory/10 backdrop-blur px-9 py-4.5 text-[0.65rem] font-bold uppercase tracking-[0.24em] text-ivory hover:border-ivory/40 transition-all duration-300 hover:-translate-y-0.5"
                 >
-                  Explore boutiques
-                </a>
+                  Browse New Arrivals
+                </Link>
+              </div>
+
+              {/* Trust Badges Row */}
+              <div className="mt-12 pt-8 border-t border-ivory/10 grid grid-cols-3 gap-4 text-[0.62rem] font-semibold uppercase tracking-[0.16em] text-ivory/60">
+                <div className="flex items-center gap-2">
+                  <span style={{ color: "var(--slide-accent)" }} className="text-sm font-bold">
+                    ✓
+                  </span>
+                  <span>Authentic Brands</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span style={{ color: "var(--slide-accent)" }} className="text-sm font-bold">
+                    ✓
+                  </span>
+                  <span>Limited Stock</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span style={{ color: "var(--slide-accent)" }} className="text-sm font-bold">
+                    ✓
+                  </span>
+                  <span>Weekly Drops</span>
+                </div>
               </div>
             </div>
 
-            <div className="relative order-1 lg:order-2">
-              <div
-                className={`relative aspect-[4/5] overflow-hidden transition-[clip-path] duration-[1400ms] ease-[cubic-bezier(0.22,1,0.36,1)] lg:aspect-[4/4.6] ${
-                  loaded ? "[clip-path:inset(0_0_0_0)]" : "[clip-path:inset(0_0_100%_0)]"
-                }`}
-                style={{
-                  backgroundColor: active.glow,
-                  transform: `translateY(${scrolled * 0.04}px)`,
-                }}
-              >
-                {SLIDES.map((s: any, i: number) => (
-                  <img
-                    key={s.id}
-                    src={getCloudinaryImageUrl(s.image, "banner")}
-                    alt={s.alt}
-                    width={1200}
-                    height={1500}
-                    loading={i === 0 ? "eager" : "lazy"}
-                    className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-[1100ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${
-                      i === slide ? "ken-burns opacity-100" : "opacity-0"
-                    }`}
-                  />
-                ))}
-                <div
-                  className="absolute bottom-0 left-0 px-6 py-5 backdrop-blur-sm transition-colors duration-[1200ms]"
-                  style={{ backgroundColor: `color-mix(in oklab, ${active.bg} 85%, transparent)` }}
+            {/* Right Side: Lifestyle Image & Interactive Badges */}
+            <div className="lg:col-span-6 order-1 lg:order-2 relative flex justify-center">
+              <div className="relative aspect-[4/5] w-full max-w-md md:max-w-lg overflow-hidden bg-stone shadow-xl">
+                <ImageWithSkeleton
+                  src={getCloudinaryImageUrl(active.image, "banner")}
+                  alt="Premium Designer Clearance"
+                  className="h-full w-full object-cover transition-transform duration-1000 scale-100 hover:scale-102"
+                />
+
+                {/* Manual Navigation Arrows */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSlide((s) => (s - 1 + SLIDES.length) % SLIDES.length);
+                  }}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 z-10 p-3.5 bg-black/45 hover:bg-black/75 backdrop-blur border border-white/10 text-white rounded-full transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer shadow-md"
+                  aria-label="Previous Slide"
                 >
-                  <p className="rule-label" style={{ color: "var(--slide-accent)" }}>
-                    {active.campaign}
-                  </p>
-                  <p className="mt-1.5 font-serif text-xl text-ivory">{active.caption}</p>
+                  <svg
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    viewBox="0 0 24 24"
+                    className="h-4.5 w-4.5"
+                    width="18"
+                    height="18"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSlide((s) => (s + 1) % SLIDES.length);
+                  }}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 z-10 p-3.5 bg-black/45 hover:bg-black/75 backdrop-blur border border-white/10 text-white rounded-full transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer shadow-md"
+                  aria-label="Next Slide"
+                >
+                  <svg
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    viewBox="0 0 24 24"
+                    className="h-4.5 w-4.5"
+                    width="18"
+                    height="18"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+
+                {/* Floating Discount Badge */}
+                <div className="absolute top-4 left-4 bg-burgundy text-ivory text-xs font-bold tracking-[0.2em] px-4 py-2.5 shadow-md uppercase animate-[pulse_3s_infinite]">
+                  70% OFF
                 </div>
 
-                {/* manual arrows */}
-                <button
-                  type="button"
-                  onClick={prev}
-                  aria-label="Previous campaign"
-                  className="group absolute left-4 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center border border-ivory/30 bg-ink/25 text-ivory backdrop-blur-sm transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:border-[var(--slide-accent)] hover:text-[var(--slide-accent)]"
-                >
-                  <ArrowRight className="rotate-180 transition-transform duration-300 group-hover:-translate-x-0.5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={next}
-                  aria-label="Next campaign"
-                  className="group absolute right-4 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center border border-ivory/30 bg-ink/25 text-ivory backdrop-blur-sm transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:border-[var(--slide-accent)] hover:text-[var(--slide-accent)]"
-                >
-                  <ArrowRight className="transition-transform duration-300 group-hover:translate-x-0.5" />
-                </button>
-              </div>
+                {/* Floating Card 1: -70% */}
+                <div className="absolute right-4 top-12 bg-background/90 backdrop-blur-md px-4 py-3 shadow-lg border border-border/20 flex flex-col hover:scale-105 transition-transform duration-300">
+                  <span className="text-[0.55rem] font-bold tracking-wider text-muted-foreground uppercase">
+                    Average Discount
+                  </span>
+                  <span className="text-xl font-bold text-burgundy mt-0.5">-70% OFF</span>
+                </div>
 
-              {/* slide index */}
-              <div className="absolute -left-10 top-1/2 hidden -translate-y-1/2 flex-col items-center gap-3 text-[0.65rem] tracking-[0.2em] xl:flex">
-                {SLIDES.map((s: any, i: number) => (
-                  <button
-                    key={s.id}
-                    type="button"
-                    onClick={() => setSlide(i)}
-                    aria-label={`Show campaign ${i + 1}`}
-                    aria-current={i === slide}
-                    className="transition-colors duration-300"
-                    style={{
-                      color:
-                        i === slide
-                          ? "var(--slide-accent)"
-                          : "color-mix(in oklab, var(--ivory) 35%, transparent)",
-                    }}
-                  >
-                    {String(i + 1).padStart(2, "0")}
-                  </button>
-                ))}
-              </div>
+                {/* Floating Card 2: Urgency */}
+                <div className="absolute left-4 bottom-20 bg-background/90 backdrop-blur-md px-4 py-3 shadow-lg border border-border/20 flex flex-col hover:scale-105 transition-transform duration-300">
+                  <span className="text-[0.55rem] font-bold tracking-wider text-burgundy uppercase">
+                    Limited Stock
+                  </span>
+                  <span className="text-xs font-medium text-foreground mt-0.5">
+                    Only 2 Left Today
+                  </span>
+                </div>
 
-              {/* slide dots */}
-              <div className="mt-6 flex items-center gap-2 xl:hidden">
-                {SLIDES.map((s: any, i: number) => (
-                  <button
-                    key={s.id}
-                    type="button"
-                    onClick={() => setSlide(i)}
-                    aria-label={`Show campaign ${i + 1}`}
-                    aria-current={i === slide}
-                    className="h-px w-8 transition-all duration-500"
-                    style={{
-                      backgroundColor:
-                        i === slide
-                          ? "var(--slide-accent)"
-                          : "color-mix(in oklab, var(--ivory) 30%, transparent)",
-                    }}
-                  />
-                ))}
+                {/* Floating Card 3: Savings */}
+                <div className="absolute right-6 bottom-8 bg-background/95 backdrop-blur px-5 py-3.5 shadow-lg border border-border/20 flex flex-col hover:scale-105 transition-transform duration-300">
+                  <span className="text-[0.55rem] font-bold tracking-wider text-forest uppercase">
+                    New Arrival
+                  </span>
+                  <span className="text-sm font-semibold text-foreground mt-1">
+                    Solene Wrap Gown
+                  </span>
+                  <span className="text-xs text-forest font-medium mt-0.5">Save $340</span>
+                </div>
               </div>
             </div>
           </div>
         </section>
 
-        {/* ── Stats ──────────────────────────────────────── */}
-        <section className="border-b border-border bg-olive-soft">
-          <div className="mx-auto grid max-w-[1600px] grid-cols-2 gap-y-12 px-5 py-16 md:px-10 lg:grid-cols-4">
-            {STATS.map((s: { value: number; suffix: string; label: string }, i: number) => (
-              <Reveal key={s.label} delay={i * 90} className="text-center lg:text-left">
-                <Counter value={s.value} suffix={s.suffix} />
-                <p className="rule-label mt-3 text-muted-foreground">{s.label}</p>
-              </Reveal>
-            ))}
-          </div>
-        </section>
+        {/* ── 4. Prominent Search Experience ──────────────────── */}
+        <section
+          id="search-section"
+          className="border-y border-border/50 bg-background py-16 scroll-mt-24"
+        >
+          <div className="mx-auto max-w-[1000px] px-5 text-center">
+            <Reveal>
+              <h2 className="display text-3xl md:text-4xl text-ink">Search the Marketplace</h2>
+              <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground mt-2">
+                Discover pieces by designer, product, category, or boutique
+              </p>
+            </Reveal>
 
-        {/* ── Categories — broken grid ───────────────────── */}
-        <section id="collections" className="mx-auto max-w-[1600px] px-5 py-24 md:px-10 md:py-36">
-          <Reveal className="flex flex-wrap items-end justify-between gap-6">
-            <div>
-              <p className="rule-label text-muted-foreground">01 — The Wardrobe</p>
-              <h2 className="display mt-5 text-[clamp(2.6rem,6vw,5rem)]">
-                Shop by <span className="italic">category</span>
-              </h2>
+            <div className="mt-8 relative max-w-2xl mx-auto">
+              <input
+                type="text"
+                id="luxury-search"
+                placeholder="Search 'Zimmermann', 'Sneakers', 'Jacquemus', 'Dress'..."
+                className="w-full bg-background border border-border focus:border-gold focus:outline-none px-6 py-5 pr-14 text-base tracking-wide shadow-sm transition-all duration-300 focus:shadow-md font-serif"
+                onChange={(e) => {
+                  const q = e.target.value;
+                  const el = document.getElementById("luxury-search");
+                  if (el) el.setAttribute("data-query", q);
+                  // Trigger state re-render
+                  const evt = new CustomEvent("search-change", { detail: q });
+                  window.dispatchEvent(evt);
+                }}
+              />
+              <div className="absolute right-5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none">
+                <SearchIcon className="h-5.5 w-5.5" />
+              </div>
             </div>
-            <a
-              href="#boutiques"
-              className="link-underline text-[0.7rem] uppercase tracking-[0.2em] text-muted-foreground"
-            >
-              View all categories
-            </a>
-          </Reveal>
 
-          <div className="mt-16 grid gap-x-6 gap-y-14 sm:grid-cols-2 lg:grid-cols-4">
-            {CATEGORIES.map((c, i) => (
-              <Reveal key={c.name} delay={i * 110} className={i % 2 === 1 ? "lg:mt-20" : ""}>
-                <Link to="/shop/$category" params={{ category: c.slug }} className="group block">
-                  <div className="img-zoom aspect-[3/4] bg-cream">
-                    <img
-                      src={c.image}
-                      alt={c.alt}
-                      loading="lazy"
-                      className="h-full w-full object-cover"
-                    />
-                  </div>
-                  <div className="mt-5 flex items-baseline justify-between border-b border-border pb-4 transition-colors duration-300 group-hover:border-gold">
-                    <h3 className="font-serif text-2xl">{c.name}</h3>
-                    <span className="rule-label text-muted-foreground">{c.count}</span>
-                  </div>
-                </Link>
-              </Reveal>
-            ))}
+            {/* Quick Suggestion Chips */}
+            <div className="mt-5 flex flex-wrap justify-center items-center gap-3 text-[0.62rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+              <span>Try:</span>
+              {[
+                { label: "Zimmermann", query: "Zimmermann" },
+                { label: "Sneakers", query: "outerwear" },
+                { label: "Jacquemus", query: "Christopher Esber" },
+                { label: "Dress", query: "Dress" },
+              ].map((chip) => (
+                <button
+                  key={chip.label}
+                  onClick={() => {
+                    const input = document.getElementById("luxury-search") as HTMLInputElement;
+                    if (input) {
+                      input.value = chip.query;
+                      input.focus();
+                      input.dispatchEvent(new Event("input", { bubbles: true }));
+                      // Trigger state
+                      const el = document.getElementById("luxury-search");
+                      if (el) el.setAttribute("data-query", chip.query);
+                      const evt = new CustomEvent("search-change", { detail: chip.query });
+                      window.dispatchEvent(evt);
+                    }
+                  }}
+                  className="bg-cream hover:bg-stone hover:text-ink px-4 py-2 border border-border/40 transition-colors cursor-pointer"
+                >
+                  Search "{chip.label}"
+                </button>
+              ))}
+            </div>
+
+            {/* Instant Search Results Panel */}
+            <SearchResultsPanel catalogItems={catalogItems} />
           </div>
         </section>
 
-        {/* ── Shop by Style ─────────────────────────────── */}
-        <section className="mx-auto max-w-[1600px] px-5 py-24 md:px-10 md:py-36 border-t border-border/40">
-          <Reveal className="flex flex-wrap items-end justify-between gap-6">
+        {/* ── 5. Just Reduced Section ─────────────────────────── */}
+        <section className="mx-auto max-w-[1600px] px-5 py-20 md:px-10 border-b border-border/30">
+          <Reveal className="flex flex-wrap items-end justify-between gap-6 mb-12">
             <div>
-              <p className="rule-label text-muted-foreground">02 — The Aesthetic</p>
-              <h2 className="display mt-5 text-[clamp(2.6rem,6vw,5rem)]">
-                Shop by <span className="italic">style</span>
+              <span className="text-[0.6rem] font-bold uppercase tracking-[0.3em] text-burgundy">
+                01 — Price Drops
+              </span>
+              <h2 className="display mt-4 text-[clamp(2.4rem,4.5vw,4.2rem)] leading-[0.95]">
+                Just <span className="italic text-burgundy">Reduced</span>
               </h2>
             </div>
             <Link
-              to="/shop"
-              className="link-underline text-[0.7rem] uppercase tracking-[0.2em] text-muted-foreground"
+              to="/shop/$category"
+              params={{ category: "dresses" }}
+              className="link-underline text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground hover:text-foreground"
             >
-              View all styles
+              View all reductions
             </Link>
           </Reveal>
 
-          <div className="mt-16 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
-            {[
-              { name: "Quiet Luxury", slug: "quiet-luxury", kicker: "Minimalism", image: boutique1, desc: "Understated silhouettes, neutral tones, and premium natural materials." },
-              { name: "Modern Tailoring", slug: "modern-tailoring", kicker: "Structure", image: boutique2, desc: "Sharp blazers, pleated trousers, and structural outer layers." },
-              { name: "Archive Pieces", slug: "archive", kicker: "Vintage", image: SLIDES[2]?.image || SLIDES[0]?.image, desc: "Highly coveted historical pieces from legendary design houses." },
-              { name: "Resort Wear", slug: "resort", kicker: "Escapism", image: SLIDES[1]?.image || SLIDES[0]?.image, desc: "Flowing silks, light linens, and sun-drenched silhouettes." },
-            ].map((style, i) => (
-              <Reveal key={style.slug} delay={i * 110} className={i % 2 === 1 ? "lg:mt-12" : ""}>
-                <Link to="/style/$tag" params={{ tag: style.slug }} className="group block relative overflow-hidden bg-cream border border-border/30 hover:border-gold transition-colors duration-500 rounded p-6">
-                  <div className="img-zoom aspect-[3/4] bg-cream overflow-hidden mb-6">
-                    <img
-                      src={style.image ? getCloudinaryImageUrl(style.image, "card") : ""}
-                      alt={style.name}
-                      loading="lazy"
-                      className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-                    />
-                  </div>
-                  <p className="rule-label text-muted-foreground text-[0.6rem] mb-2">{style.kicker}</p>
-                  <h3 className="font-serif text-2xl group-hover:text-gold transition-colors duration-300">{style.name}</h3>
-                  <p className="mt-3 text-xs text-muted-foreground leading-relaxed">{style.desc}</p>
-                  <span className="inline-flex items-center gap-1.5 mt-5 text-[0.6rem] uppercase tracking-[0.2em] font-semibold group-hover:translate-x-1 transition-transform">
-                    Explore <ArrowRight className="h-3 w-3" />
-                  </span>
-                </Link>
-              </Reveal>
-            ))}
-          </div>
-        </section>
-
-        {/* ── Editorial split ────────────────────────────── */}
-        <section className="bg-cream">
-          <div className="mx-auto grid max-w-[1600px] items-center gap-12 px-5 py-24 md:px-10 md:py-36 lg:grid-cols-2 lg:gap-24">
-            <Reveal
-              variant="mask"
-              className="order-2 aspect-[4/3] overflow-hidden lg:order-1 lg:aspect-[4/5]"
-            >
-              <img
-                src={boutique1}
-                alt="Interior of a travertine boutique with brass rails"
-                loading="lazy"
-                className="h-full w-full object-cover"
-              />
-            </Reveal>
-            <Reveal delay={140} className="order-1 lg:order-2">
-              <p className="rule-label text-muted-foreground">03 — The Journal</p>
-              <h2 className="display mt-6 text-[clamp(2.4rem,5.5vw,4.6rem)]">
-                Rooms that make
-                <br />
-                <span className="italic">you slow down.</span>
-              </h2>
-              <p className="mt-8 max-w-lg text-[0.95rem] leading-[1.9] text-muted-foreground">
-                We photograph every partner boutique in its own light — the travertine, the brass,
-                the quiet of a Tuesday morning. Because where a piece comes from is part of what it
-                is.
-              </p>
-              <a href="#boutiques" className="btn-ghost-luxe mt-10">
-                Read the story <ArrowRight />
-              </a>
-            </Reveal>
-          </div>
-        </section>
-
-        {/* ── Trending products ──────────────────────────── */}
-        <section id="trending" className="mx-auto max-w-[1600px] px-5 py-24 md:px-10 md:py-36">
-          <Reveal className="flex flex-wrap items-end justify-between gap-6">
-            <div>
-              <p className="rule-label text-muted-foreground">04 — This Week</p>
-              <h2 className="display mt-5 text-[clamp(2.6rem,6vw,5rem)]">
-                Most <span className="italic">wanted</span>
-              </h2>
-            </div>
-            <a
-              href="#collections"
-              className="link-underline text-[0.7rem] uppercase tracking-[0.2em] text-muted-foreground"
-            >
-              View all pieces
-            </a>
-          </Reveal>
-
-          <div className="mt-16 grid gap-x-6 gap-y-16 sm:grid-cols-2 lg:grid-cols-4">
-            {mostWanted.map((p, i) => (
-              <Reveal key={p.id} delay={i * 110}>
-                <Link to="/product/$id" params={{ id: p.id }}>
-                  <ProductCard product={p} />
-                </Link>
-              </Reveal>
-            ))}
-          </div>
-        </section>
-
-        {/* ── Curated Edits ──────────────────────────────── */}
-        <section className="mx-auto max-w-[1600px] px-5 py-24 md:px-10 md:py-36 border-t border-border/40">
-          <Reveal className="flex flex-wrap items-end justify-between gap-6 mb-16">
-            <div>
-              <p className="rule-label text-muted-foreground">05 — Curated Edits</p>
-              <h2 className="display mt-5 text-[clamp(2.6rem,6vw,5rem)]">
-                The Editorial <span className="italic">Pages</span>
-              </h2>
-            </div>
-            <p className="text-[0.7rem] uppercase tracking-[0.2em] text-muted-foreground">
-              Exclusive seasonal capsules
-            </p>
-          </Reveal>
-
-          <div className="grid gap-12 lg:grid-cols-2">
-            {curatedPages.map((page: any, i: number) => (
-              <Reveal key={page.id} delay={i * 110}>
-                <Link
-                  to="/curated/$slug"
-                  params={{ slug: page.slug }}
-                  className="group block relative overflow-hidden bg-cream border border-border/30 hover:border-gold transition-colors duration-500 rounded p-6 h-full flex flex-col"
-                >
-                  <div className="img-zoom aspect-[16/10] bg-cream overflow-hidden mb-6">
-                    <img
-                      src={page.hero_image_url ? getCloudinaryImageUrl(page.hero_image_url, "banner") : getCloudinaryImageUrl(boutique1, "banner")}
-                      alt={page.title}
-                      loading="lazy"
-                      className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-                    />
-                  </div>
-                  <p className="rule-label text-gold text-[0.62rem] uppercase tracking-[0.18em] mb-2">Edit</p>
-                  <h3 className="font-serif text-3xl group-hover:text-gold transition-colors duration-300">{page.title}</h3>
-                  <p className="mt-3 text-sm text-muted-foreground leading-relaxed flex-1">{page.subtitle}</p>
-                  <span className="inline-flex items-center gap-1.5 mt-6 text-[0.6875rem] uppercase tracking-[0.2em] font-semibold group-hover:translate-x-1 transition-transform">
-                    Enter Edit <ArrowRight className="h-3.5 w-3.5" />
-                  </span>
-                </Link>
-              </Reveal>
-            ))}
-          </div>
-        </section>
-
-        {/* ── Designer spotlight ─────────────────────────── */}
-        <section
-          style={
-            {
-              backgroundColor: activeDesigner.bg,
-              "--gold": activeDesigner.accent,
-            } as React.CSSProperties
-          }
-          className="text-ivory transition-[background-color] duration-[1000ms] ease-[cubic-bezier(0.22,1,0.36,1)]"
-        >
-          <div className="mx-auto grid max-w-[1600px] items-center gap-12 px-5 py-24 md:px-10 md:py-36 lg:grid-cols-[0.85fr_1.15fr] lg:gap-24">
-            <Reveal variant="mask" className="relative aspect-[4/5] overflow-hidden">
-              {DESIGNERS.map((d, i) => (
-                <img
-                  key={d.id}
-                  src={d.image}
-                  alt={d.alt}
-                  loading="lazy"
-                  width={900}
-                  height={1125}
-                  className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-[900ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${
-                    i === designerIdx ? "opacity-100" : "opacity-0"
-                  }`}
-                />
+          <div className="grid gap-x-6 gap-y-12 sm:grid-cols-2 lg:grid-cols-4">
+            {catalogItems
+              .filter((item) => item.reduction > 0)
+              .sort((a, b) => b.reduction - a.reduction)
+              .slice(0, 4)
+              .map((p, i) => (
+                <Reveal key={p.id} delay={i * 100}>
+                  <Link to="/product/$id" params={{ id: p.id }} className="h-full block">
+                    <ProductCard product={p} />
+                  </Link>
+                </Reveal>
               ))}
-            </Reveal>
-            <Reveal delay={140}>
-              <p className="rule-label text-ivory/40">06 — Designer Spotlight</p>
-              <h2
-                key={activeDesigner.id}
-                className="display mt-6 text-[clamp(2.4rem,5.5vw,4.8rem)] animate-[hero-line_900ms_cubic-bezier(0.22,1,0.36,1)_both]"
-              >
-                {activeDesigner.name}
-              </h2>
-              <p className="mt-8 max-w-xl text-[0.95rem] leading-[1.9] text-ivory/60">
-                {activeDesigner.bio}
-              </p>
-              <dl className="mt-12 grid max-w-lg grid-cols-3 gap-8 border-t border-ivory/12 pt-8">
-                {activeDesigner.stats.map(([k, v]: [string, string]) => (
-                  <div key={k}>
-                    <dt className="rule-label text-ivory/40">{k}</dt>
-                    <dd className="mt-2 font-serif text-2xl" style={{ color: "var(--gold)" }}>
-                      {v}
-                    </dd>
-                  </div>
-                ))}
-              </dl>
-
-              <div className="mt-12 flex flex-wrap items-center gap-x-8 gap-y-4">
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    aria-label="Previous designer"
-                    onClick={() =>
-                      setDesignerIdx((i) => (i - 1 + DESIGNERS.length) % DESIGNERS.length)
-                    }
-                    className="grid h-11 w-11 place-items-center rounded-full border border-ivory/25 text-ivory/70 transition-colors duration-300 hover:border-gold hover:text-gold"
-                  >
-                    <ArrowRight className="rotate-180" />
-                  </button>
-                  <button
-                    type="button"
-                    aria-label="Next designer"
-                    onClick={() => setDesignerIdx((i) => (i + 1) % DESIGNERS.length)}
-                    className="grid h-11 w-11 place-items-center rounded-full border border-ivory/25 text-ivory/70 transition-colors duration-300 hover:border-gold hover:text-gold"
-                  >
-                    <ArrowRight />
-                  </button>
-                </div>
-                <div className="flex flex-wrap gap-x-6 gap-y-2">
-                  {DESIGNERS.map((d, i) => (
-                    <button
-                      key={d.id}
-                      type="button"
-                      onClick={() => setDesignerIdx(i)}
-                      aria-current={i === designerIdx}
-                      className={`text-[0.65rem] uppercase tracking-[0.2em] transition-colors duration-300 ${
-                        i === designerIdx ? "text-gold" : "text-ivory/40 hover:text-ivory/80"
-                      }`}
-                    >
-                      {d.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </Reveal>
           </div>
         </section>
 
-        {/* ── Boutiques ──────────────────────────────────── */}
-        <section id="boutiques" className="mx-auto max-w-[1600px] px-5 py-24 md:px-10 md:py-36">
-          <Reveal>
-            <p className="rule-label text-muted-foreground">07 — The Directory</p>
-            <h2 className="display mt-5 max-w-3xl text-[clamp(2.6rem,6vw,5rem)]">
-              One hundred and forty boutiques worth <span className="italic">knowing.</span>
+        {/* ── 6. Category Selection chips ──────────────────────── */}
+        <section className="bg-cream/40 py-12 border-b border-border/20">
+          <div className="mx-auto max-w-[1600px] px-5 md:px-10">
+            <p className="text-center text-[0.6rem] font-bold uppercase tracking-[0.3em] text-muted-foreground mb-6">
+              Shop by Category
+            </p>
+            <div className="flex flex-wrap justify-center gap-4">
+              {CATEGORIES.map((c) => (
+                <Link
+                  key={c.slug}
+                  to="/shop/$category"
+                  params={{ category: c.slug }}
+                  className="group bg-background hover:bg-black hover:text-ivory px-8 py-5 border border-border shadow-sm transition-all duration-300 font-serif text-lg text-ink flex items-center gap-3 cursor-pointer"
+                >
+                  <span>{c.name}</span>
+                  <span className="text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground group-hover:text-gold transition-colors">
+                    ({catalogItems.filter((i) => i.category === c.slug).length})
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── 7. Trending Deals ───────────────────────────────── */}
+        <section className="mx-auto max-w-[1600px] px-5 py-20 md:px-10 border-b border-border/30">
+          <Reveal className="flex flex-wrap items-end justify-between gap-6 mb-12">
+            <div>
+              <span className="text-[0.6rem] font-bold uppercase tracking-[0.3em] text-gold font-semibold">
+                02 — Selling Out
+              </span>
+              <h2 className="display mt-4 text-[clamp(2.4rem,4.5vw,4.2rem)] leading-[0.95]">
+                Trending <span className="italic text-gold">Deals</span>
+              </h2>
+            </div>
+            <Link
+              to="/shop/$category"
+              params={{ category: "bags" }}
+              className="link-underline text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground hover:text-foreground"
+            >
+              Shop Hot Pieces
+            </Link>
+          </Reveal>
+
+          <div className="grid gap-x-6 gap-y-12 sm:grid-cols-2 lg:grid-cols-4">
+            {catalogItems
+              .filter((item) => item.stock <= 3 && item.reduction > 0)
+              .slice(0, 4)
+              .map((p, i) => (
+                <Reveal key={p.id} delay={i * 100}>
+                  <Link to="/product/$id" params={{ id: p.id }} className="h-full block">
+                    <ProductCard product={p} />
+                  </Link>
+                </Reveal>
+              ))}
+          </div>
+        </section>
+
+        {/* ── 8. Luxury Under $300 ────────────────────────────── */}
+        <section className="mx-auto max-w-[1600px] px-5 py-20 md:px-10 border-b border-border/30 bg-soft-grey/10">
+          <Reveal className="flex flex-wrap items-end justify-between gap-6 mb-12">
+            <div>
+              <span className="text-[0.6rem] font-bold uppercase tracking-[0.3em] text-forest">
+                03 — Accessible Luxury
+              </span>
+              <h2 className="display mt-4 text-[clamp(2.4rem,4.5vw,4.2rem)] leading-[0.95]">
+                Luxury Under <span className="italic text-forest">$300</span>
+              </h2>
+            </div>
+            <Link
+              to="/shop/$category"
+              params={{ category: "jewellery" }}
+              className="link-underline text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground hover:text-foreground"
+            >
+              Browse all budget luxury
+            </Link>
+          </Reveal>
+
+          <div className="grid gap-x-6 gap-y-12 sm:grid-cols-2 lg:grid-cols-4">
+            {catalogItems
+              .filter((item) => item.priceValue <= 300)
+              .slice(0, 4)
+              .map((p, i) => (
+                <Reveal key={p.id} delay={i * 100}>
+                  <Link to="/product/$id" params={{ id: p.id }} className="h-full block">
+                    <ProductCard product={p} />
+                  </Link>
+                </Reveal>
+              ))}
+          </div>
+        </section>
+
+        {/* ── Curated Editorial Edits ─────────────────────────── */}
+        <section className="mx-auto max-w-[1600px] px-5 py-24 md:px-10 border-b border-border/30 bg-cream/30">
+          <Reveal className="flex flex-wrap items-end justify-between gap-6 mb-12">
+            <div>
+              <span className="text-[0.6rem] font-bold uppercase tracking-[0.3em] text-gold font-semibold">
+                Curated Features
+              </span>
+              <h2 className="display mt-4 text-[clamp(2.4rem,4.5vw,4.2rem)] leading-[0.95]">
+                Editorial <span className="italic text-gold">Stories & Edits</span>
+              </h2>
+              <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground mt-2 max-w-lg">
+                Explore hand-picked luxury selections and seasonal stories curated by our buying
+                team
+              </p>
+            </div>
+            <Link
+              to="/shop/$category"
+              params={{ category: "dresses" }}
+              className="link-underline text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground hover:text-foreground"
+            >
+              Browse all edits
+            </Link>
+          </Reveal>
+
+          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+            {(curatedPages.length > 0
+              ? curatedPages
+              : [
+                  {
+                    id: "summer-edit",
+                    title: "Summer & Resort Edit",
+                    slug: "summer-edit",
+                    subtitle: "Lightweight silks, linen tailoring & resort silhouettes",
+                    hero_image_url: homepage.assets["boutique-editorial-1"] || SLIDES[0]?.image,
+                  },
+                  {
+                    id: "minimalist-wardrobe",
+                    title: "The Minimalist Wardrobe",
+                    slug: "minimalist-wardrobe",
+                    subtitle: "Capsule tailoring, neutral tones & quiet luxury essentials",
+                    hero_image_url: homepage.assets["boutique-editorial-2"] || SLIDES[1]?.image,
+                  },
+                ]
+            ).map((page: any, i: number) => (
+              <Reveal
+                key={page.id || page.slug}
+                delay={i * 120}
+                className="group relative overflow-hidden bg-stone border border-border/40 hover:border-gold/60 transition-all duration-500 flex flex-col justify-between shadow-sm"
+              >
+                <div className="aspect-[16/10] overflow-hidden bg-stone relative">
+                  <ImageWithSkeleton
+                    src={getCloudinaryImageUrl(page.hero_image_url || SLIDES[0]?.image, "banner")}
+                    alt={page.title}
+                    className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-103"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+                  <div className="absolute bottom-4 left-5 right-5 text-ivory">
+                    <span className="text-[0.55rem] font-bold uppercase tracking-[0.24em] text-gold block mb-1">
+                      Curated Edit
+                    </span>
+                    <h3 className="display text-2xl leading-snug text-ivory font-semibold group-hover:text-gold transition-colors">
+                      {page.title}
+                    </h3>
+                  </div>
+                </div>
+                <div className="p-6 bg-card flex-1 flex flex-col justify-between">
+                  <p className="text-xs text-muted-foreground leading-relaxed font-serif line-clamp-2">
+                    {page.subtitle ||
+                      page.description ||
+                      "Discover hand-picked archive pieces and exclusive boutique clearance drops."}
+                  </p>
+                  <div className="mt-6 pt-4 border-t border-border/40 flex items-center justify-between">
+                    <Link
+                      to="/curated/$slug"
+                      params={{ slug: page.slug }}
+                      className="inline-flex items-center gap-2 text-[0.62rem] font-bold uppercase tracking-[0.24em] text-foreground group-hover:text-gold transition-colors"
+                    >
+                      Explore Story <ArrowRight />
+                    </Link>
+                  </div>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+        </section>
+
+        {/* ── 9. Designer Spotlight Carousel ──────────────────── */}
+        <section
+          id="designers"
+          className="bg-black py-16 border-b border-border/10 overflow-hidden relative"
+        >
+          <div className="mx-auto max-w-[1600px] px-5 md:px-10">
+            <p className="text-center text-[0.6rem] font-bold uppercase tracking-[0.3em] text-champagne/80 mb-10">
+              04 — Shop Leading Designers
+            </p>
+            {/* Auto Scrolling Typographic Marquee */}
+            <div className="flex gap-16 animate-[marquee_25s_linear_infinite] whitespace-nowrap py-4">
+              {[
+                "Zimmermann",
+                "Camilla",
+                "Aje",
+                "Rebecca Vallance",
+                "Scanlan Theodore",
+                "Manning Cartell",
+                "Bianca Spender",
+                "Bassike",
+                "Christopher Esber",
+                "Camilla and Marc",
+              ].map((name) => (
+                <Link
+                  key={name}
+                  to="/shop/$category"
+                  params={{ category: "dresses" }}
+                  search={{ designer: name } as any}
+                  className="font-serif text-[clamp(2rem,5vw,4rem)] text-ivory/50 hover:text-gold transition-colors duration-300 font-light tracking-wide inline-block"
+                >
+                  {name}
+                </Link>
+              ))}
+              {/* Duplicate list to handle infinite scroll loop */}
+              {[
+                "Zimmermann",
+                "Camilla",
+                "Aje",
+                "Rebecca Vallance",
+                "Scanlan Theodore",
+                "Manning Cartell",
+                "Bianca Spender",
+                "Bassike",
+                "Christopher Esber",
+                "Camilla and Marc",
+              ].map((name) => (
+                <Link
+                  key={name + "-dup"}
+                  to="/shop/$category"
+                  params={{ category: "dresses" }}
+                  search={{ designer: name } as any}
+                  className="font-serif text-[clamp(2rem,5vw,4rem)] text-ivory/50 hover:text-gold transition-colors duration-300 font-light tracking-wide inline-block"
+                >
+                  {name}
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── 10. Boutique Collection (Simplified) ────────────── */}
+        <section
+          id="boutiques"
+          className="mx-auto max-w-[1600px] px-5 py-20 md:px-10 border-b border-border/30"
+        >
+          <Reveal className="mb-12">
+            <span className="text-[0.6rem] font-bold uppercase tracking-[0.3em] text-muted-foreground">
+              05 — Partner Network
+            </span>
+            <h2 className="display mt-4 max-w-3xl text-[clamp(2.4rem,4.5vw,4.2rem)] leading-[0.95]">
+              Australian Boutique <span className="italic">Ateliers</span>
             </h2>
           </Reveal>
 
-          <div className="mt-16 grid gap-6 lg:grid-cols-[1.4fr_1fr]">
-            <Reveal className="img-zoom relative aspect-[16/10] bg-cream">
-              <img
-                src={boutique2}
-                alt="Minimal charcoal atelier with a single garment under light"
-                loading="lazy"
-                className="h-full w-full object-cover"
-              />
-              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-ink/70 to-transparent p-8">
-                <p className="rule-label text-ivory/70">Melbourne</p>
-                <p className="display mt-2 text-4xl text-ivory">Silk &amp; Stone</p>
-              </div>
-            </Reveal>
-
-            <Reveal delay={130} className="flex flex-col justify-between gap-6">
-              {[
-                ["Hayman Edit", "Sydney", "84 pieces"],
-                ["Saltbush Studio", "Byron Bay", "61 pieces"],
-                ["Margot House", "Perth", "47 pieces"],
-              ].map(([name, city, count]) => (
-                <a
-                  key={name}
-                  href="#collections"
-                  className="group flex flex-1 items-center justify-between border-b border-border pb-6 transition-colors duration-300 hover:border-gold"
-                >
-                  <div>
-                    <p className="font-serif text-3xl transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:translate-x-1.5">
-                      {name}
-                    </p>
-                    <p className="rule-label mt-2 text-muted-foreground">
-                      {city} — {count}
-                    </p>
+          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
+            {[
+              {
+                name: "Maison Verre",
+                city: "Sydney",
+                image: boutique1,
+                products: 24,
+                discount: 45,
+              },
+              {
+                name: "Atelier Nord",
+                city: "Melbourne",
+                image: boutique2,
+                products: 18,
+                discount: 40,
+              },
+              {
+                name: "Saltbush Studio",
+                city: "Hobart",
+                image: SLIDES[2]?.image || SLIDES[0]?.image,
+                products: 12,
+                discount: 35,
+              },
+              {
+                name: "Margot House",
+                city: "Perth",
+                image: SLIDES[1]?.image || SLIDES[0]?.image,
+                products: 15,
+                discount: 50,
+              },
+            ].map((boutique, i) => (
+              <Reveal
+                key={boutique.name}
+                delay={i * 100}
+                className="bg-cream/30 border border-border/40 p-5 flex flex-col justify-between hover:border-gold/50 transition-colors duration-300"
+              >
+                <div>
+                  <div className="aspect-[4/3] bg-stone overflow-hidden mb-5">
+                    <img
+                      src={getCloudinaryImageUrl(boutique.image, "card")}
+                      alt={boutique.name}
+                      className="h-full w-full object-cover transition-transform duration-700 hover:scale-102"
+                    />
                   </div>
-                  <ArrowRight className="text-muted-foreground transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:translate-x-1.5 group-hover:text-foreground" />
-                </a>
-              ))}
-            </Reveal>
+                  <p className="text-[0.55rem] font-bold tracking-wider text-muted-foreground uppercase">
+                    {boutique.city}
+                  </p>
+                  <h3 className="font-serif text-2xl mt-1 text-ink">{boutique.name}</h3>
+                  <div className="mt-4 flex justify-between text-xs text-muted-foreground border-y border-border/30 py-3">
+                    <span>{boutique.products} Products</span>
+                    <span className="font-semibold text-burgundy">
+                      Average {boutique.discount}% Off
+                    </span>
+                  </div>
+                </div>
+                <Link
+                  to="/merchants"
+                  className="mt-6 w-full text-center bg-black py-3 text-[0.62rem] font-semibold uppercase tracking-[0.2em] text-ivory hover:bg-gold hover:text-ink transition-colors duration-300"
+                >
+                  Shop Boutique
+                </Link>
+              </Reveal>
+            ))}
           </div>
         </section>
 
-        {/* ── Campaign banner ────────────────────────────── */}
-        <section className="relative overflow-hidden">
-          <Reveal className="relative flex min-h-[70svh] items-center justify-center bg-champagne px-5 py-28 text-center md:px-10">
-            <div className="max-w-3xl">
-              <p className="rule-label text-charcoal/60">The Winter Edit closes Sunday</p>
-              <h2 className="display mt-7 text-[clamp(2.8rem,7vw,6rem)]">
-                Up to seventy percent, <span className="italic">quietly.</span>
+        {/* ── 11. Best Sellers ────────────────────────────────── */}
+        <section className="mx-auto max-w-[1600px] px-5 py-20 md:px-10 border-b border-border/30">
+          <Reveal className="flex flex-wrap items-end justify-between gap-6 mb-12">
+            <div>
+              <span className="text-[0.6rem] font-bold uppercase tracking-[0.3em] text-burgundy">
+                06 — High Conversion
+              </span>
+              <h2 className="display mt-4 text-[clamp(2.4rem,4.5vw,4.2rem)] leading-[0.95]">
+                Best <span className="italic text-burgundy">Sellers</span>
               </h2>
-              <a href="#trending" className="btn-luxe mt-11">
-                Enter the edit <ArrowRight />
-              </a>
             </div>
+            <Link
+              to="/shop/$category"
+              params={{ category: "dresses" }}
+              className="link-underline text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground hover:text-foreground"
+            >
+              Shop Top Sellers
+            </Link>
           </Reveal>
+
+          <div className="grid gap-x-6 gap-y-12 sm:grid-cols-2 lg:grid-cols-4">
+            {catalogItems
+              .filter((item) => item.addedDaysAgo < 30)
+              .slice(0, 4)
+              .map((p, i) => (
+                <Reveal key={p.id} delay={i * 100}>
+                  <Link to="/product/$id" params={{ id: p.id }} className="h-full block">
+                    <ProductCard product={p} />
+                  </Link>
+                </Reveal>
+              ))}
+          </div>
+        </section>
+
+        {/* ── 12. Trust Section ───────────────────────────────── */}
+        <section className="bg-cream py-20 border-b border-border/40">
+          <div className="mx-auto max-w-[1600px] px-5 md:px-10">
+            <Reveal className="text-center mb-16">
+              <p className="text-[0.6rem] font-bold uppercase tracking-[0.3em] text-muted-foreground">
+                Why shop with us
+              </p>
+              <h2 className="display mt-4 text-[clamp(2.4rem,4.5vw,4rem)]">
+                Luxury Clearance Guaranteed
+              </h2>
+            </Reveal>
+
+            <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+              {[
+                {
+                  title: "100% Authentic",
+                  desc: "Every item is checked and verified by our in-house luxury fashion experts.",
+                },
+                {
+                  title: "Secure Checkout",
+                  desc: "Your payment details are SSL protected and processed with industry-standard encryption.",
+                },
+                {
+                  title: "Australian Boutiques",
+                  desc: "Supporting local boutique owners and ateliers across the country.",
+                },
+                {
+                  title: "Easy Returns",
+                  desc: "Shop with peace of mind. We offer returns on all clearance products.",
+                },
+                {
+                  title: "Fast Shipping",
+                  desc: "Tracked express shipping across Australia with signature delivery.",
+                },
+                {
+                  title: "Premium Support",
+                  desc: "Our dedicated customer service team is ready to assist with sizing or orders.",
+                },
+              ].map((trust, i) => (
+                <Reveal
+                  key={trust.title}
+                  delay={i * 80}
+                  className="bg-background border border-border/30 p-8 flex flex-col justify-center shadow-sm"
+                >
+                  <span className="text-burgundy text-lg font-bold">✓</span>
+                  <h3 className="font-serif text-xl mt-3 text-ink">{trust.title}</h3>
+                  <p className="mt-3 text-xs text-muted-foreground leading-relaxed">{trust.desc}</p>
+                </Reveal>
+              ))}
+            </div>
+          </div>
         </section>
       </main>
 
-      <Footer bg={active.bg} accent={active.accent} />
+      <Footer />
+    </div>
+  );
+}
+
+// ── Search Helper Subcomponent ────────────────────────────
+function SearchResultsPanel({ catalogItems }: { catalogItems: any[] }) {
+  const [query, setQuery] = useState("");
+
+  useEffect(() => {
+    const handler = (e: any) => setQuery(e.detail || "");
+    window.addEventListener("search-change", handler);
+    return () => window.removeEventListener("search-change", handler);
+  }, []);
+
+  const results = useMemo(() => {
+    if (!query.trim()) return [];
+    const q = query.toLowerCase().trim();
+    return catalogItems.filter((item) => {
+      return (
+        item.designer.toLowerCase().includes(q) ||
+        item.name.toLowerCase().includes(q) ||
+        item.category.toLowerCase().includes(q) ||
+        item.boutique.toLowerCase().includes(q)
+      );
+    });
+  }, [query, catalogItems]);
+
+  if (!query.trim()) return null;
+
+  return (
+    <div className="mt-12 bg-background border border-border p-6 md:p-10 shadow-lg text-left animate-[fade-in_0.4s_ease-out]">
+      <div className="flex items-center justify-between border-b border-border/40 pb-4 mb-8">
+        <p className="text-[0.62rem] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+          Found {results.length} Matching pieces
+        </p>
+        <button
+          onClick={() => {
+            const input = document.getElementById("luxury-search") as HTMLInputElement;
+            if (input) {
+              input.value = "";
+              input.focus();
+              const evt = new CustomEvent("search-change", { detail: "" });
+              window.dispatchEvent(evt);
+            }
+          }}
+          className="text-[0.6rem] font-bold uppercase tracking-[0.2em] text-burgundy hover:underline cursor-pointer"
+        >
+          Clear
+        </button>
+      </div>
+
+      {results.length === 0 ? (
+        <p className="text-sm text-muted-foreground font-serif text-center py-10">
+          No matching designer products found for "{query}". Try another designer, boutique, or
+          product name.
+        </p>
+      ) : (
+        <div className="grid gap-x-6 gap-y-12 sm:grid-cols-2 lg:grid-cols-4">
+          {results.slice(0, 8).map((p: any) => (
+            <Link key={p.id} to="/product/$id" params={{ id: p.id }}>
+              <ProductCard product={p} />
+            </Link>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

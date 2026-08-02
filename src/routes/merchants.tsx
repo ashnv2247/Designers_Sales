@@ -36,7 +36,6 @@ export const Route = createFileRoute("/merchants")({
 function MerchantsPage() {
   const { data: merchants } = useSuspenseQuery(merchantDirectoryQuery);
 
-
   return (
     <>
       <Nav />
@@ -56,28 +55,28 @@ function MerchantsPage() {
         <ul className="mt-16 border-t border-border">
           {merchants.map((m, i) => (
             <li key={m.name} className="border-b border-border">
-             <Reveal delay={i * 60}>
-              <div className="grid grid-cols-1 gap-2 py-8 sm:grid-cols-12 sm:items-baseline">
-                <p className="rule-label text-muted-foreground sm:col-span-1">
-                  {String(i + 1).padStart(2, "0")}
-                </p>
-                <h2 className="display text-3xl sm:col-span-4">{m.name}</h2>
-                <p className="text-sm text-muted-foreground sm:col-span-3">{m.city}</p>
-                <p className="text-sm text-muted-foreground sm:col-span-2">{m.count} pieces</p>
-                <div className="flex flex-wrap gap-3 sm:col-span-2 sm:justify-end">
-                  {m.categories.map((c) => (
-                    <Link
-                      key={c}
-                      to="/shop/$category"
-                      params={{ category: c }}
-                      className="link-underline text-[0.62rem] uppercase tracking-[0.18em] text-muted-foreground"
-                    >
-                      {c}
-                    </Link>
-                  ))}
+              <Reveal delay={i * 60}>
+                <div className="grid grid-cols-1 gap-2 py-8 sm:grid-cols-12 sm:items-baseline">
+                  <p className="rule-label text-muted-foreground sm:col-span-1">
+                    {String(i + 1).padStart(2, "0")}
+                  </p>
+                  <h2 className="display text-3xl sm:col-span-4">{m.name}</h2>
+                  <p className="text-sm text-muted-foreground sm:col-span-3">{m.city}</p>
+                  <p className="text-sm text-muted-foreground sm:col-span-2">{m.count} pieces</p>
+                  <div className="flex flex-wrap gap-3 sm:col-span-2 sm:justify-end">
+                    {m.categories.map((c) => (
+                      <Link
+                        key={c}
+                        to="/shop/$category"
+                        params={{ category: c }}
+                        className="link-underline text-[0.62rem] uppercase tracking-[0.18em] text-muted-foreground"
+                      >
+                        {c}
+                      </Link>
+                    ))}
+                  </div>
                 </div>
-              </div>
-             </Reveal>
+              </Reveal>
             </li>
           ))}
         </ul>

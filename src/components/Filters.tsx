@@ -30,12 +30,7 @@ interface CheckProps {
 export function FilterCheck({ label, count, checked, onChange }: CheckProps) {
   return (
     <label className="flex cursor-pointer items-center gap-3 text-sm text-muted-foreground transition-colors duration-300 hover:text-foreground">
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={onChange}
-        className="peer sr-only"
-      />
+      <input type="checkbox" checked={checked} onChange={onChange} className="peer sr-only" />
       <span
         aria-hidden
         className="relative flex h-4 w-4 shrink-0 items-center justify-center border border-border transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] peer-checked:border-olive-deep peer-checked:bg-olive-deep"
@@ -48,18 +43,15 @@ export function FilterCheck({ label, count, checked, onChange }: CheckProps) {
       </span>
       <span className={checked ? "text-foreground" : undefined}>{label}</span>
       {count !== undefined && (
-        <span className="ml-auto text-[0.65rem] tabular-nums text-muted-foreground/70">{count}</span>
+        <span className="ml-auto text-[0.65rem] tabular-nums text-muted-foreground/70">
+          {count}
+        </span>
       )}
     </label>
   );
 }
 
-export function SwatchCheck({
-  label,
-  swatch,
-  checked,
-  onChange,
-}: CheckProps & { swatch: string }) {
+export function SwatchCheck({ label, swatch, checked, onChange }: CheckProps & { swatch: string }) {
   return (
     <button
       onClick={onChange}
@@ -68,7 +60,9 @@ export function SwatchCheck({
     >
       <span
         className={`h-4 w-4 rounded-full border transition-all duration-300 ${
-          checked ? "border-gold ring-1 ring-gold ring-offset-2 ring-offset-background" : "border-border"
+          checked
+            ? "border-gold ring-1 ring-gold ring-offset-2 ring-offset-background"
+            : "border-border"
         }`}
         style={{ background: swatch }}
       />

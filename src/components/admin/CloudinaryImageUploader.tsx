@@ -3,6 +3,7 @@ import { useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { adminSignCloudinaryUpload } from "@/lib/cloudinary.functions";
+import type { CloudinaryEntityType } from "@/lib/cloudinary-config";
 
 export type UploadedCloudinaryImage = {
   url: string;
@@ -16,13 +17,15 @@ export function CloudinaryImageUploader({
   label,
   value,
   publicId,
-  folder,
+  entityType,
+  entityId,
   onChange,
 }: {
   label: string;
   value?: string | null;
   publicId?: string | null;
-  folder: string;
+  entityType: CloudinaryEntityType;
+  entityId?: string;
   onChange: (image: UploadedCloudinaryImage | null) => void;
 }) {
   const sign = useServerFn(adminSignCloudinaryUpload),
@@ -39,7 +42,7 @@ export function CloudinaryImageUploader({
     setBusy(true);
     try {
       const signed = await sign({
-        data: { publicId: `${folder.replace(/^\/+|\/+$/g, "")}/${crypto.randomUUID()}` },
+        data: { entityType, entityId, imageId: crypto.randomUUID(), fileName: file.name },
       });
       const result = await new Promise<any>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
@@ -59,7 +62,7 @@ export function CloudinaryImageUploader({
         body.append("timestamp", String(signed.timestamp));
         body.append("signature", signed.signature);
         body.append("folder", signed.folder);
-        body.append("public_id", signed.public_id);
+        body.append("public_id", signed.publicId);
         xhr.send(body);
       });
       setPreview(result.secure_url);

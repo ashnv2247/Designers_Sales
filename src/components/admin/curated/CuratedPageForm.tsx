@@ -92,7 +92,7 @@ export function CuratedPageForm({ page }: { page?: any }) {
             label="Desktop hero"
             value={watch("hero_image_url")}
             publicId={watch("hero_image_public_id")}
-            folder="curated/pages"
+            entityType="collection"
             onChange={(v) => setValue("hero_image_url", v, { shouldDirty: true })}
             onPublicIdChange={(v) => setValue("hero_image_public_id", v, { shouldDirty: true })}
           />
@@ -100,7 +100,7 @@ export function CuratedPageForm({ page }: { page?: any }) {
             label="Mobile hero"
             value={watch("mobile_hero_image_url")}
             publicId={watch("mobile_hero_image_public_id")}
-            folder="curated/pages"
+            entityType="collection"
             onChange={(v) => setValue("mobile_hero_image_url", v, { shouldDirty: true })}
             onPublicIdChange={(v) =>
               setValue("mobile_hero_image_public_id", v, { shouldDirty: true })

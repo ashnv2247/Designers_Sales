@@ -1,10 +1,21 @@
 import { createServerFn } from "@tanstack/react-start";
 import { createClient } from "@supabase/supabase-js";
+import { z } from "zod";
 
 import type { Database } from "@/integrations/supabase/types";
+import { isSellableVariant } from "@/lib/pricing";
+import { resolveProductPrice } from "@/lib/sale-pricing";
+import {
+  homepageSlides,
+  designerSpotlights,
+  homepageStats,
+  boutiqueAssets,
+  authHero,
+} from "@/lib/homepage-static-data";
 
 export interface DbCatalogItem {
-  id: string;
+  id: string; // slug
+  dbId: string; // database uuid
   name: string;
   designer: string;
   designerSlug: string;
@@ -29,7 +40,13 @@ export interface DbCatalogItem {
   stock: number;
   provenance: { atelier: string; city: string; year: string; note: string };
   tags: string[];
+  materials: string[];
+  variants: Database["public"]["Tables"]["product_variants"]["Row"][];
+  images: Database["public"]["Tables"]["product_images"]["Row"][];
+  original_price: number;
+  discounted_price: number | null;
   saleInfo?: { id: string; name: string; slug: string };
+  saleRelations: any[];
 }
 
 export interface DbMerchant {
@@ -74,28 +91,56 @@ function serverClient() {
 
 const SELECT = `
   id, name, slug, short_description, description, condition, condition_notes, composition,
-  season, model_wears_size, is_featured, is_new_arrival, created_at,
+  season, is_featured, is_new_arrival, created_at, original_price, discounted_price, currency, sku, external_product_url,
+  materials, measurements, tags, fit, pattern, neckline, sleeve_length, dress_length, gender,
   categories:category_id ( slug, name ),
   brands:brand_id ( name, slug ),
   merchants:merchant_id ( name, slug, city ),
-  product_images ( image_url, alt_text, display_order, is_primary ),
-  product_measurements ( measurement_name, measurement_value, unit ),
-  product_variants ( id, name, sizes, original_price, discounted_price, stock_quantity, is_default, colors:color_id ( name ), sale_variants ( sales ( id, name, slug, is_active, starts_at, ends_at ) ) ),
-  product_tags ( tags ( name, slug ) )
+  product_variants ( id, color_name, color_hex, size, sku, barcode, stock_quantity, original_price, discounted_price, is_active ),
+  product_images ( id, variant_id, color_name, image_url, image_public_id, alt_text, display_order, is_primary ),
+  sale_products ( discount_type, discount_base, discount_value, sale_price, sales ( id, name, slug, is_active, starts_at, ends_at ) )
 `;
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-function mapItem(row: any): DbCatalogItem {
-  const variant = row.product_variants?.find((v: any) => v.is_default) ?? row.product_variants?.[0];
-  const original = Number(variant?.original_price ?? 0);
-  const discounted = variant?.discounted_price != null ? Number(variant.discounted_price) : null;
-  const priceValue = discounted ?? original;
-  const reduction = discounted && original > 0 ? Math.round((1 - discounted / original) * 100) : 0;
-  const images = [...(row.product_images ?? [])].sort(
-    (a: any, b: any) => a.display_order - b.display_order,
+export function mapItem(row: any): DbCatalogItem {
+  const variants = (row.product_variants as any[]) ?? [];
+  const images = (row.product_images as any[]) ?? [];
+  const activeVariants = variants.filter(isSellableVariant);
+
+  // Group variants by color
+  const defaultVariant =
+    activeVariants.find((v) => v.stock_quantity > 0) ?? activeVariants[0] ?? variants[0];
+  const defaultColorName = defaultVariant?.color_name ?? "Default";
+
+  const saleRelations = row.sale_products ?? [];
+  const resolvedPrices = activeVariants.map((variant) =>
+    resolveProductPrice({
+      originalPrice: Number(variant.original_price),
+      currentPrice: Number(variant.discounted_price ?? variant.original_price),
+      currency: row.currency ?? "AUD",
+      sales: saleRelations,
+    }),
   );
-  const gallery: string[] = images.map((i: any) => i.image_url);
-  const image = images.find((i: any) => i.is_primary)?.image_url ?? gallery[0] ?? "";
+  if (!resolvedPrices.length) throw new Error(`Product ${row.id} has no sellable priced variant`);
+  const lowestPrice = resolvedPrices.reduce((best, price) =>
+    price.effectivePrice < best.effectivePrice ? price : best,
+  );
+  const hasRange = new Set(resolvedPrices.map((price) => price.effectivePrice)).size > 1;
+  const priceString = `${hasRange ? "From " : ""}${fmt(lowestPrice.effectivePrice)}`;
+  const wasString = lowestPrice.totalSaving > 0 ? fmt(lowestPrice.originalPrice) : undefined;
+  const reduction = Math.round(lowestPrice.effectiveDiscountPercentage);
+
+  // Sorting Images prioritizing color-specific images
+  const colorImages = images.filter((img) => img.color_name === defaultColorName);
+  const generalImages = images.filter((img) => !img.color_name);
+  const sortedImages = [...colorImages, ...generalImages].sort(
+    (a: any, b: any) => (a.display_order ?? 0) - (b.display_order ?? 0),
+  );
+
+  const gallery: string[] = sortedImages.map((i: any) => i.image_url);
+  const primaryImg = images.find((i: any) => i.is_primary) ?? sortedImages[0];
+  const image = primaryImg?.image_url ?? gallery[0] ?? "";
+
   const designer = row.brands?.name ?? "DesignerSale";
   const boutique = row.merchants?.name ?? "DesignerSale";
   const condition = CONDITION_LABEL[row.condition] ?? "New season";
@@ -104,45 +149,62 @@ function mapItem(row: any): DbCatalogItem {
     Math.round((Date.now() - new Date(row.created_at).getTime()) / 86_400_000),
   );
 
-  const now = new Date();
-  const activeSale = row.product_variants?.flatMap((v: any) => v.sale_variants ?? [])
-    .map((sv: any) => sv.sales)
-    .find((sale: any) => {
-      if (!sale || !sale.is_active) return false;
-      const starts = sale.starts_at ? new Date(sale.starts_at) : null;
-      const ends = sale.ends_at ? new Date(sale.ends_at) : null;
-      return (!starts || starts <= now) && (!ends || ends >= now);
-    });
+  const activeSaleRelation = saleRelations.find(
+    (relation: any) => relation.sales?.id === lowestPrice.activeSaleId,
+  );
+  const activeSale = activeSaleRelation?.sales;
 
-  const tags = (row.product_tags ?? []).map((pt: any) => pt.tags?.slug).filter(Boolean);
+  const tags = row.tags ?? [];
+  const materials = row.materials ?? [];
+
+  const availableSizes = activeVariants
+    .filter((v: any) => v.color_name === defaultColorName && v.stock_quantity > 0)
+    .map((v: any) => v.size);
+
+  const measurementsObj = row.measurements ?? {};
+  const measurements = Object.entries(measurementsObj).map(([label, value]) => ({
+    label,
+    value: String(value),
+  }));
+
+  const allSizes = [
+    ...new Set(
+      activeVariants.filter((v: any) => v.color_name === defaultColorName).map((v: any) => v.size),
+    ),
+  ];
+  const totalStock = activeVariants.reduce((sum, v) => sum + (v.stock_quantity ?? 0), 0);
 
   return {
     id: row.slug,
+    dbId: row.id,
     name: row.name,
     designer,
-    designerSlug: designer,
+    designerSlug: row.brands?.slug ?? designer,
     boutique,
-    size: row.model_wears_size ?? variant?.sizes?.[0] ?? "One size",
-    colour: variant?.colors?.name ?? variant?.name ?? "Ivory",
+    size: availableSizes.join(", ") || "No sizes available",
+    colour: defaultColorName,
     condition,
-    price: fmt(priceValue),
-    was: reduction ? fmt(original) : undefined,
-    badge: reduction >= 55 ? "Final pieces" : reduction === 0 ? "New in" : `${reduction}% off`,
+    price: priceString,
+    was: wasString,
+    badge: lowestPrice.hasActiveSale
+      ? `${reduction}% off · SALE`
+      : reduction >= 55
+        ? "Final pieces"
+        : reduction === 0
+          ? "New in"
+          : `${reduction}% off`,
     image,
     alt: row.short_description ?? `${row.name} by ${designer}`,
-    priceValue,
+    priceValue: lowestPrice.effectivePrice,
     reduction,
     addedDaysAgo,
     category: row.categories?.slug ?? "dresses",
     gallery: gallery.length ? gallery : [image],
-    measurements: (row.product_measurements ?? []).map((m: any) => ({
-      label: m.measurement_name,
-      value: `${Number(m.measurement_value)} ${m.unit}`,
-    })),
+    measurements,
     composition: row.composition ?? "",
     conditionNote: row.condition_notes ?? "",
-    sizes: variant?.sizes ?? ["One size"],
-    stock: variant?.stock_quantity ?? 0,
+    sizes: allSizes,
+    stock: totalStock,
     provenance: {
       atelier: boutique,
       city: row.merchants?.city ?? "Sydney",
@@ -150,7 +212,15 @@ function mapItem(row: any): DbCatalogItem {
       note: row.description ?? "",
     },
     tags,
-    ...(activeSale && { saleInfo: { id: activeSale.id, name: activeSale.name, slug: activeSale.slug } }),
+    materials,
+    variants,
+    images,
+    saleRelations,
+    original_price: Number(row.original_price),
+    discounted_price: row.discounted_price != null ? Number(row.discounted_price) : null,
+    ...(activeSale && {
+      saleInfo: { id: activeSale.id, name: activeSale.name, slug: activeSale.slug },
+    }),
   };
 }
 
@@ -159,12 +229,50 @@ export const getCatalog = createServerFn({ method: "GET" }).handler(async () => 
   const { data, error } = await supabase
     .from("products")
     .select(SELECT)
-    .eq("status", "published")
+    .in("status", ["published", "sold_out"])
     .order("created_at", { ascending: true });
 
   if (error) throw new Error(error.message);
-  return (data ?? []).map(mapItem);
+  return (data ?? [])
+    .filter((row: any) => (row.product_variants ?? []).some(isSellableVariant))
+    .map(mapItem);
 });
+
+export const getVariantQuote = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) => z.object({ variantId: z.string().uuid() }).parse(data))
+  .handler(async ({ data }) => {
+    const { data: variant, error } = await serverClient()
+      .from("product_variants")
+      .select(
+        `id,stock_quantity,is_active,original_price,discounted_price,
+         products!inner(id,status,currency,sale_products(discount_type,discount_base,discount_value,sales(id,name,is_active,starts_at,ends_at)))`,
+      )
+      .eq("id", data.variantId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    const product: any = variant?.products;
+    if (
+      !variant ||
+      !variant.is_active ||
+      variant.stock_quantity <= 0 ||
+      variant.original_price == null ||
+      product?.status !== "published"
+    ) {
+      throw new Error("This option is no longer available.");
+    }
+    const price = resolveProductPrice({
+      originalPrice: Number(variant.original_price),
+      currentPrice: Number(variant.discounted_price ?? variant.original_price),
+      currency: product.currency ?? "AUD",
+      sales: product.sale_products ?? [],
+    });
+    return {
+      unitPriceCents: Math.round(price.effectivePrice * 100),
+      originalPriceCents: Math.round(price.originalPrice * 100),
+      currentPriceCents: Math.round(price.currentPrice * 100),
+      activeSaleName: price.activeSaleName,
+    };
+  });
 
 export const getMerchantDirectory = createServerFn({ method: "GET" }).handler(async () => {
   const supabase = serverClient();
@@ -177,7 +285,7 @@ export const getMerchantDirectory = createServerFn({ method: "GET" }).handler(as
     supabase
       .from("products")
       .select("merchant_id, categories:category_id ( slug )")
-      .eq("status", "published"),
+      .in("status", ["published", "sold_out"]),
   ]);
 
   if (error) throw new Error(error.message);
@@ -238,86 +346,65 @@ export const getCatalogMetadata = createServerFn({ method: "GET" }).handler(asyn
 
 export const getHomepageContent = createServerFn({ method: "GET" }).handler(async () => {
   const supabase = serverClient();
-  const [{ data: page, error }, { data: assets, error: assetError }] = await Promise.all([
+  const [
+    { data: page, error: pageError },
+    { data: categoriesData, error: catError },
+    { data: merchantsData, error: merchError },
+  ] = await Promise.all([
     supabase
       .from("curated_pages")
-      .select(
-        `id,title,curated_sections(id,title,subtitle,content,image_url,display_order,section_type,settings,
-       curated_section_categories(display_order,categories(id,name,slug,image_url)),
-       curated_section_products(display_order,products(${SELECT})),
-       curated_section_merchants(display_order,merchants(id,name,slug,city,country,logo_url)))`,
-      )
+      .select(`id, title, curated_page_products(display_order, products(${SELECT}))`)
       .eq("slug", "home")
       .eq("status", "published")
-      .single(),
+      .maybeSingle(),
+    supabase.from("categories").select("id,name,slug,image_url,description"),
     supabase
-      .from("site_assets")
-      .select("asset_key,image_url,alt_text")
-      .in("asset_key", ["boutique-editorial-1", "boutique-editorial-2"]),
+      .from("merchants")
+      .select("id,name,slug,city,country,logo_url")
+      .eq("status", "approved")
+      .eq("is_active", true)
+      .eq("is_featured", true),
   ]);
-  if (error) throw new Error(error.message);
-  if (assetError) throw new Error(assetError.message);
-  const sections = [...(page.curated_sections ?? [])].sort(
-    (a: any, b: any) => a.display_order - b.display_order,
-  );
+
+  if (pageError) throw new Error(pageError.message);
+  if (catError) throw new Error(catError.message);
+  if (merchError) throw new Error(merchError.message);
+
+  const homeProducts = (page?.curated_page_products ?? [])
+    .sort((a: any, b: any) => a.display_order - b.display_order)
+    .map((item: any) =>
+      item.products?.product_variants?.some(isSellableVariant) ? mapItem(item.products) : null,
+    )
+    .filter(Boolean);
+
+  const slides = homepageSlides.map((slide) => ({
+    ...slide,
+    kicker: slide.kicker,
+  }));
+
   return {
-    slides: sections
-      .filter((section: any) => section.settings?.kind === "homepage-slide")
-      .map((section: any) => ({
-        ...section.settings,
-        image: section.image_url,
-        alt: section.title,
-        kicker: section.subtitle,
-      })),
-    categories:
-      sections
-        .find((section: any) => section.settings?.kind === "homepage-categories")
-        ?.curated_section_categories?.sort((a: any, b: any) => a.display_order - b.display_order)
-        .map((item: any) => ({
-          ...item.categories,
-          image: item.categories?.image_url,
-          alt: item.categories?.name,
-          count: "",
-        })) ?? [],
-    products:
-      sections
-        .find((section: any) => section.settings?.kind === "homepage-products")
-        ?.curated_section_products?.sort((a: any, b: any) => a.display_order - b.display_order)
-        .map((item: any) => mapItem(item.products)) ?? [],
-    designers: sections
-      .filter((section: any) => section.settings?.kind === "designer-spotlight")
-      .map((section: any) => ({
-        ...section.settings,
-        name: section.title,
-        image: section.image_url,
-        bio: section.content,
-        alt: section.title,
-        stats: [],
-      })),
-    merchants:
-      sections
-        .find((section: any) => section.settings?.kind === "homepage-merchants")
-        ?.curated_section_merchants?.sort((a: any, b: any) => a.display_order - b.display_order)
-        .map((item: any) => item.merchants) ?? [],
-    stats:
-      (
-        sections.find((section: any) => section.settings?.kind === "homepage-stats")
-          ?.settings as any
-      )?.items ?? [],
-    assets: Object.fromEntries((assets ?? []).map((asset) => [asset.asset_key, asset.image_url])),
+    slides,
+    categories: (categoriesData ?? []).map((cat: any) => ({
+      ...cat,
+      image: cat.image_url,
+      alt: cat.name,
+      count: "",
+    })),
+    products: homeProducts,
+    designers: designerSpotlights,
+    merchants: merchantsData ?? [],
+    stats: homepageStats,
+    assets: boutiqueAssets,
   };
 });
 
 export const getSiteAsset = createServerFn({ method: "GET" })
   .inputValidator((data: unknown) => String(data))
   .handler(async ({ data }) => {
-    const { data: asset, error } = await serverClient()
-      .from("site_assets")
-      .select("asset_key,image_url,alt_text")
-      .eq("asset_key", data)
-      .single();
-    if (error) throw new Error(error.message);
-    return asset;
+    if (data === "auth-hero") {
+      return authHero;
+    }
+    return null;
   });
 
 export const getCuratedPageBySlug = createServerFn({ method: "GET" })
@@ -327,10 +414,8 @@ export const getCuratedPageBySlug = createServerFn({ method: "GET" })
     const { data: page, error } = await supabase
       .from("curated_pages")
       .select(
-        `id,title,subtitle,description,hero_image_url,mobile_hero_image_url,curated_sections(id,title,subtitle,content,image_url,display_order,section_type,settings,
-       curated_section_categories(display_order,categories(id,name,slug,image_url)),
-       curated_section_products(display_order,products(${SELECT})),
-       curated_section_merchants(display_order,merchants(id,name,slug,city,country,logo_url)))`
+        `id,title,subtitle,description,hero_image_url,mobile_hero_image_url,
+         curated_page_products(display_order,products(${SELECT}))`,
       )
       .eq("slug", slug)
       .eq("status", "published")
@@ -339,22 +424,21 @@ export const getCuratedPageBySlug = createServerFn({ method: "GET" })
     if (error) throw new Error(error.message);
     if (!page) return null;
 
-    const mappedSections = (page.curated_sections ?? []).map((section: any) => {
-      if (section.section_type === "products" && section.curated_section_products) {
-        return {
-          ...section,
-          curated_section_products: section.curated_section_products.map((csp: any) => ({
-            ...csp,
-            products: csp.products ? mapItem(csp.products) : null,
-          })),
-        };
-      }
-      return section;
-    });
+    const mappedProducts = (page.curated_page_products ?? [])
+      .sort((a: any, b: any) => (a.display_order ?? 0) - (b.display_order ?? 0))
+      .map((cpp: any) =>
+        cpp.products?.product_variants?.some(isSellableVariant) ? mapItem(cpp.products) : null,
+      )
+      .filter((p: DbCatalogItem | null): p is DbCatalogItem => p !== null);
 
     return {
-      ...page,
-      curated_sections: mappedSections,
+      id: page.id,
+      title: page.title,
+      subtitle: page.subtitle,
+      description: page.description,
+      hero_image_url: page.hero_image_url,
+      mobile_hero_image_url: page.mobile_hero_image_url,
+      products: mappedProducts,
     };
   });
 

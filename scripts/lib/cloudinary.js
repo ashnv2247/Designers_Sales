@@ -10,16 +10,15 @@ export const isCloudinaryUrl = (value) => {
     return false;
   }
 };
-export const stablePublicId = (
-  source,
-  root = process.env.CLOUDINARY_UPLOAD_FOLDER || "designer-sales",
-) => {
+export const stablePublicId = (source) => {
   const normalized = source
     .replaceAll("\\", "/")
     .replace(/^.*?(src\/assets\/|public\/media\/)/, "")
     .replace(/\.[^.]+$/, "");
-  return `${root.replace(/^\/|\/$/g, "")}/seed/${normalized}`
-    .replace(/[^a-zA-Z0-9/_-]/g, "-")
+  return normalized
+    .replace(/[^a-zA-Z0-9_-]/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
     .toLowerCase();
 };
 export function configureCloudinary(env = process.env) {
@@ -47,6 +46,7 @@ export async function uploadSeedImage({ source, root = process.cwd(), required =
     return null;
   }
   const result = await configureCloudinary().uploader.upload(input, {
+    folder: "designer-sales/seed",
     public_id: stablePublicId(source),
     overwrite: true,
     invalidate: true,

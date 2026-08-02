@@ -16,7 +16,10 @@ export const Route = createFileRoute("/_authenticated/admin/orders/$id")({
   head: () => ({
     meta: [
       { title: "Order detail | DesignerSale Admin" },
-      { name: "description", content: "Full order breakdown, customer details and fulfilment controls." },
+      {
+        name: "description",
+        content: "Full order breakdown, customer details and fulfilment controls.",
+      },
       { property: "og:title", content: "Order detail | DesignerSale Admin" },
       { property: "og:description", content: "Order breakdown and fulfilment controls." },
       { property: "og:type", content: "website" },
@@ -32,7 +35,12 @@ function OrderDetail() {
   const setStatus = useServerFn(adminSetOrderStatus);
   const qc = useQueryClient();
 
-  const { data: order, isPending, error, refetch } = useQuery({
+  const {
+    data: order,
+    isPending,
+    error,
+    refetch,
+  } = useQuery({
     queryKey: ["admin-order", id],
     queryFn: () => fetchOrder({ data: { id } }),
   });
@@ -50,7 +58,12 @@ function OrderDetail() {
 
   if (isPending) return <LoadingSkeleton rows={8} />;
   if (error || !order)
-    return <ErrorState message={friendlyError((error as Error)?.message ?? "")} onRetry={() => refetch()} />;
+    return (
+      <ErrorState
+        message={friendlyError((error as Error)?.message ?? "")}
+        onRetry={() => refetch()}
+      />
+    );
 
   const items = (order.order_items ?? []) as any[];
   const cancelled = order.status === "cancelled";

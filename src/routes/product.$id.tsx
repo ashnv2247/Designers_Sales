@@ -1,6 +1,7 @@
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { useSuspenseQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { createFileRoute, Link, useNavigate, notFound } from "@tanstack/react-router";
+import { useSuspenseQuery, useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 
 import { Nav } from "@/components/Nav";
@@ -10,8 +11,12 @@ import { ProductCard } from "@/components/ProductCard";
 import { ArrowRight, HeartIcon } from "@/components/Icons";
 import { getTone } from "@/lib/catalog-ui";
 import { catalogQuery, findItem, relatedItems } from "@/lib/catalog-queries";
+import { getVariantQuote } from "@/lib/catalog.functions";
 import { useCart } from "@/lib/cart";
 import { useImageTone } from "@/lib/useImageTone";
+import { useSession } from "@/lib/use-session";
+import { getUserWishlist, toggleWishlist } from "@/lib/wishlist.functions";
+import { resolveProductPrice } from "@/lib/sale-pricing";
 
 export const Route = createFileRoute("/product/$id")({
   loader: async ({ params, context }) => {
@@ -23,7 +28,10 @@ export const Route = createFileRoute("/product/$id")({
   head: ({ loaderData }) => {
     if (!loaderData) {
       return {
-        meta: [{ title: "Piece unavailable — DesignerSale" }, { name: "robots", content: "noindex" }],
+        meta: [
+          { title: "Piece unavailable — DesignerSale" },
+          { name: "robots", content: "noindex" },
+        ],
       };
     }
     const title = `${loaderData.name} by ${loaderData.designer} | DesignerSale`;
@@ -57,7 +65,10 @@ function ProductNotFound() {
         <p className="mt-4 text-sm text-muted-foreground">
           It is no longer available. The rest of the edit is waiting.
         </p>
-        <Link to="/shop" className="mt-8 bg-olive-deep px-8 py-4 text-[0.62rem] uppercase tracking-[0.24em] text-ivory">
+        <Link
+          to="/shop"
+          className="mt-8 bg-olive-deep px-8 py-4 text-[0.62rem] uppercase tracking-[0.24em] text-ivory"
+        >
           Return to the shop
         </Link>
       </main>
@@ -67,6 +78,7 @@ function ProductNotFound() {
 }
 
 const TABS = ["Details", "Measurements", "Provenance", "Shipping & returns"] as const;
+const fmt = (n: number) => `$${Math.round(n).toLocaleString("en-AU")}`;
 
 function ProductPage() {
   const { id } = Route.useParams();
@@ -74,26 +86,170 @@ function ProductPage() {
   const product = findItem(items, id)!;
   const related = relatedItems(items, product);
   const cart = useCart();
+  const { user } = useSession();
+  const navigate = useNavigate();
+  const qc = useQueryClient();
+  const toggleWishlistFn = useServerFn(toggleWishlist);
+  const getWishlistFn = useServerFn(getUserWishlist);
+  const quoteVariant = useServerFn(getVariantQuote);
+
+  // Group variants by color to support normalized model
+  const activeVariants = (product.variants ?? []).filter(
+    (v: any) => v.is_active && v.original_price != null,
+  );
+
+  const uniqueColorsMap = new Map<
+    string,
+    { name: string; hex: string | null; sizes: any[]; isAvailable: boolean }
+  >();
+  for (const v of activeVariants) {
+    if (!uniqueColorsMap.has(v.color_name)) {
+      uniqueColorsMap.set(v.color_name, {
+        name: v.color_name,
+        hex: v.color_hex,
+        sizes: [],
+        isAvailable: false,
+      });
+    }
+    const col = uniqueColorsMap.get(v.color_name)!;
+    col.sizes.push({
+      name: v.size,
+      available: v.stock_quantity > 0,
+      variantId: v.id,
+      stock: v.stock_quantity,
+    });
+    if (v.stock_quantity > 0) {
+      col.isAvailable = true;
+    }
+  }
+  const uniqueColors = Array.from(uniqueColorsMap.values());
+
+  const initialColorName = uniqueColors[0]?.name ?? "Default";
+  const [selectedColorName, setSelectedColorName] = useState(initialColorName);
+
+  const selectedColor = uniqueColors.find((c) => c.name === selectedColorName);
+  const firstAvailableSize =
+    selectedColor?.sizes?.find((s: any) => s.available)?.name ??
+    selectedColor?.sizes?.[0]?.name ??
+    "One size";
 
   const [active, setActive] = useState(0);
-  const [size, setSize] = useState(product.size);
+  const [size, setSize] = useState(firstAvailableSize);
   const [tab, setTab] = useState<(typeof TABS)[number]>("Details");
-  const [saved, setSaved] = useState(false);
-  const tone = useImageTone(product.gallery[active] ?? product.image, getTone(product));
+  const { data: wishlistItems = [] } = useQuery({
+    queryKey: ["user-wishlist"],
+    queryFn: () => getWishlistFn({}),
+    enabled: Boolean(user),
+    staleTime: 30_000,
+  });
+  const saved = Boolean(user && wishlistItems.some((item: any) => item.product?.id === product.id));
 
-  const sizeOptions = product.sizes.length ? product.sizes : ["One size"];
+  // Reset active size if color changes
+  useEffect(() => {
+    if (selectedColor) {
+      const firstAvail =
+        selectedColor.sizes?.find((s: any) => s.available)?.name ??
+        selectedColor.sizes?.[0]?.name ??
+        "One size";
+      setSize(firstAvail);
+      setActive(0);
+    }
+  }, [selectedColorName]);
 
-  function addToBag() {
+  const selectedVariant = activeVariants.find(
+    (v: any) => v.color_name === selectedColorName && v.size === size,
+  );
+
+  // Calculate pricing based on current selection
+  const currentVariantPrice = selectedVariant
+    ? resolveProductPrice({
+        originalPrice: Number(selectedVariant.original_price),
+        currentPrice: Number(selectedVariant.discounted_price ?? selectedVariant.original_price),
+        currency: "AUD",
+        sales: product.saleRelations,
+      })
+    : null;
+  const priceString = currentVariantPrice
+    ? fmt(currentVariantPrice.effectivePrice)
+    : "Price unavailable";
+  const wasString =
+    currentVariantPrice && currentVariantPrice.totalSaving > 0
+      ? fmt(currentVariantPrice.originalPrice)
+      : undefined;
+  const reduction = Math.round(currentVariantPrice?.effectiveDiscountPercentage ?? 0);
+
+  // Resolve gallery images
+  const colorImgs = (product.images ?? []).filter(
+    (img: any) => img.color_name === selectedColorName,
+  );
+  const generalImgs = (product.images ?? []).filter((img: any) => !img.color_name);
+  const activeColorImages = colorImgs.length > 0 ? colorImgs : generalImgs;
+  const sortedColorImages = [...activeColorImages].sort(
+    (a: any, b: any) => (a.display_order ?? 0) - (b.display_order ?? 0),
+  );
+
+  const gallery =
+    sortedColorImages.length > 0
+      ? sortedColorImages.map((img: any) => img.image_url)
+      : product.gallery;
+
+  const tone = useImageTone(gallery[active] ?? product.image, getTone(product));
+
+  const wishlistMut = useMutation({
+    mutationFn: (productIdOrSlug: string) => toggleWishlistFn({ data: { productIdOrSlug } }),
+    onSuccess: (res) => {
+      toast.success(res.message);
+      qc.invalidateQueries({ queryKey: ["user-wishlist"] });
+    },
+    onError: (err: Error) => toast.error(err.message || "Failed to update wishlist"),
+  });
+
+  function handleWishlistToggle() {
+    if (!user) {
+      toast.info("Please sign in to save pieces to your wishlist", {
+        action: {
+          label: "Sign in",
+          onClick: () => navigate({ to: "/auth" }),
+        },
+      });
+      return;
+    }
+    wishlistMut.mutate(product.id);
+  }
+
+  async function addToBag() {
+    if (!selectedVariant) {
+      toast.error("Please select a variant option");
+      return;
+    }
+    if (selectedVariant.stock_quantity <= 0) {
+      toast.error("This option is currently out of stock");
+      return;
+    }
+    if (!currentVariantPrice) {
+      toast.error("This option is not currently available for sale");
+      return;
+    }
+    let quote;
+    try {
+      quote = await quoteVariant({ data: { variantId: selectedVariant.id } });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not verify this price");
+      return;
+    }
     cart.add({
-      id: product.id,
+      variantId: selectedVariant.id,
+      productId: product.dbId,
       name: product.name,
       designer: product.designer,
-      image: product.image,
+      image: gallery[0] || product.image,
       size,
-      colour: product.colour,
-      unitPriceCents: product.priceValue * 100,
+      colour: selectedColorName,
+      unitPriceCents: quote.unitPriceCents,
     });
-    toast.success("Added to your bag", { description: `${product.name} · Size ${size}` });
+    toast.success("Added to your bag", {
+      description: `${product.name} · ${selectedColorName} · Size ${size}`,
+    });
   }
 
   return (
@@ -112,7 +268,11 @@ function ProductPage() {
             </li>
             <li aria-hidden>/</li>
             <li>
-              <Link to="/shop/$category" params={{ category: product.category }} className="link-underline">
+              <Link
+                to="/shop/$category"
+                params={{ category: product.category }}
+                className="link-underline"
+              >
                 {product.category}
               </Link>
             </li>
@@ -125,7 +285,7 @@ function ProductPage() {
           {/* Gallery */}
           <div className="flex gap-4 lg:gap-6">
             <div className="hidden w-20 shrink-0 flex-col gap-3 md:flex">
-              {product.gallery.map((src, i) => (
+              {gallery.map((src, i) => (
                 <button
                   key={src + i}
                   onClick={() => setActive(i)}
@@ -143,7 +303,7 @@ function ProductPage() {
             <div className="flex-1">
               <div className="img-zoom relative aspect-[3/4] bg-cream">
                 <img
-                  src={product.gallery[active]}
+                  src={gallery[active] || product.image}
                   alt={`${product.alt} — view ${active + 1}`}
                   className="h-full w-full object-cover"
                 />
@@ -154,7 +314,7 @@ function ProductPage() {
                 )}
               </div>
               <div className="mt-3 flex gap-3 md:hidden">
-                {product.gallery.map((src, i) => (
+                {gallery.map((src, i) => (
                   <button
                     key={src + i}
                     onClick={() => setActive(i)}
@@ -171,15 +331,19 @@ function ProductPage() {
           {/* Detail column */}
           <div className="lg:sticky lg:top-28 lg:self-start">
             <p className="rule-label text-muted-foreground">{product.designer}</p>
-            <h1 className="display mt-4 text-[clamp(2.2rem,4vw,3.4rem)] leading-[1.03]">{product.name}</h1>
+            <h1 className="display mt-4 text-[clamp(2.2rem,4vw,3.4rem)] leading-[1.03]">
+              {product.name}
+            </h1>
 
             <div className="mt-6 flex flex-wrap items-baseline gap-4">
-              <span className="text-xl">{product.price}</span>
-              {product.was && (
-                <span className="text-sm text-muted-foreground line-through">{product.was}</span>
+              <span className="text-xl">{priceString}</span>
+              {wasString && (
+                <span className="text-sm text-muted-foreground line-through">{wasString}</span>
               )}
-              {product.reduction > 0 && (
-                <span className="rule-label bg-olive-deep px-2 py-1 text-ivory">{product.reduction}% off</span>
+              {reduction > 0 && (
+                <span className="rule-label bg-olive-deep px-2 py-1 text-ivory">
+                  {reduction}% off
+                </span>
               )}
               {product.saleInfo && (
                 <span className="rule-label bg-gold text-ink font-semibold px-2 py-1">
@@ -188,9 +352,28 @@ function ProductPage() {
               )}
             </div>
 
+            {currentVariantPrice?.hasActiveSale && (
+              <div className="mt-3 space-y-1 text-sm text-muted-foreground">
+                {currentVariantPrice.hasProductDiscount && (
+                  <p>{fmt(currentVariantPrice.currentPrice)} before this sale</p>
+                )}
+                <p>{fmt(currentVariantPrice.originalPrice)} original price</p>
+                <p>You save {fmt(currentVariantPrice.totalSaving)} in total</p>
+                <p>Extra {fmt(currentVariantPrice.additionalSaleSaving)} off during this sale</p>
+                {currentVariantPrice.saleEndsAt && (
+                  <p>
+                    Sale ends {new Date(currentVariantPrice.saleEndsAt).toLocaleString("en-AU")}
+                  </p>
+                )}
+              </div>
+            )}
+
             {product.saleInfo && (
               <div className="mt-6 p-4 border border-gold/30 bg-gold/5 rounded text-sm text-muted-foreground animate-fade-in">
-                <span className="font-semibold text-foreground">Featured Edit:</span> This piece is part of the <span className="text-foreground font-semibold">{product.saleInfo.name}</span> event.
+                <span className="font-semibold text-foreground">Featured Edit:</span> This piece is
+                part of the{" "}
+                <span className="text-foreground font-semibold">{product.saleInfo.name}</span>{" "}
+                event.
               </div>
             )}
 
@@ -201,11 +384,11 @@ function ProductPage() {
               </div>
               <div>
                 <dt className="rule-label text-muted-foreground">Colour</dt>
-                <dd className="mt-1.5">{product.colour}</dd>
+                <dd className="mt-1.5">{selectedColorName}</dd>
               </div>
               <div>
                 <dt className="rule-label text-muted-foreground">Composition</dt>
-                <dd className="mt-1.5">{product.composition}</dd>
+                <dd className="mt-1.5">{product.composition || "N/A"}</dd>
               </div>
               <div>
                 <dt className="rule-label text-muted-foreground">Sourced from</dt>
@@ -213,24 +396,70 @@ function ProductPage() {
               </div>
             </dl>
 
+            {uniqueColors.length > 1 && (
+              <div className="mt-8">
+                <p className="rule-label text-muted-foreground">Colour Option</p>
+                <div className="mt-3 flex flex-wrap gap-2.5">
+                  {uniqueColors.map((opt: any) => {
+                    const isSelected = selectedColorName === opt.name;
+                    const hex = opt.hex || "#CCCCCC";
+                    return (
+                      <button
+                        key={opt.name}
+                        onClick={() => setSelectedColorName(opt.name)}
+                        className={`group relative flex items-center justify-center h-8 px-3 border rounded-full text-[0.62rem] uppercase tracking-wider font-semibold transition-all duration-300 ${
+                          isSelected
+                            ? "border-olive-deep bg-cream/40"
+                            : "border-border hover:border-olive-deep cursor-pointer"
+                        }`}
+                        aria-pressed={isSelected}
+                      >
+                        {opt.hex && (
+                          <span
+                            className="w-3.5 h-3.5 rounded-full border border-black/10 mr-1.5"
+                            style={{ backgroundColor: hex }}
+                          />
+                        )}
+                        <span>{opt.name}</span>
+                        {!opt.isAvailable && (
+                          <span className="text-[0.55rem] text-muted-foreground ml-1.5">
+                            (Sold out)
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             <div className="mt-8">
               <div className="flex items-baseline justify-between">
                 <p className="rule-label text-muted-foreground">Size — {size}</p>
-                <span className="text-xs text-muted-foreground">Listed size {product.size}</span>
+                <span className="text-xs text-muted-foreground">Listed sizes</span>
               </div>
               <div className="mt-3 flex flex-wrap gap-2">
-                {sizeOptions.map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => setSize(s)}
-                    aria-pressed={size === s}
-                    className={`min-w-14 border px-4 py-3 text-[0.62rem] uppercase tracking-[0.2em] transition-colors duration-300 ${
-                      size === s ? "border-olive-deep bg-olive-deep text-ivory" : "border-border hover:border-olive-deep"
-                    }`}
-                  >
-                    {s}
-                  </button>
-                ))}
+                {(selectedColor?.sizes ?? []).map((s: any) => {
+                  const isSelected = size === s.name;
+                  const isAvailable = s.available;
+                  return (
+                    <button
+                      key={s.name}
+                      onClick={() => isAvailable && setSize(s.name)}
+                      disabled={!isAvailable}
+                      aria-pressed={isSelected}
+                      className={`min-w-14 border px-4 py-3 text-[0.62rem] uppercase tracking-[0.2em] transition-colors duration-300 relative ${
+                        isSelected
+                          ? "border-olive-deep bg-olive-deep text-ivory"
+                          : isAvailable
+                            ? "border-border hover:border-olive-deep cursor-pointer"
+                            : "border-border/40 text-muted-foreground/40 bg-cream/10 cursor-not-allowed line-through"
+                      }`}
+                    >
+                      {s.name}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -242,10 +471,11 @@ function ProductPage() {
                 Add to bag
               </button>
               <button
-                onClick={() => setSaved((s) => !s)}
+                onClick={handleWishlistToggle}
+                disabled={wishlistMut.isPending}
                 aria-pressed={saved}
                 aria-label="Save to wishlist"
-                className="flex w-14 items-center justify-center border border-border transition-colors duration-300 hover:border-olive-deep cursor-pointer"
+                className="flex w-14 items-center justify-center border border-border transition-colors duration-300 hover:border-olive-deep cursor-pointer disabled:opacity-50"
               >
                 <HeartIcon className={saved ? "fill-current text-gold" : ""} />
               </button>
@@ -276,15 +506,25 @@ function ProductPage() {
                 {tab === "Details" && (
                   <div className="space-y-3">
                     <p>
-                      {product.name} in {product.colour.toLowerCase()}, cut from {product.composition.toLowerCase()}.
+                      {product.name} in {selectedColorName.toLowerCase()}
+                      {product.materials?.length > 0
+                        ? `, cut from ${product.materials.join(", ").toLowerCase()}`
+                        : ""}
+                      .
                     </p>
                     <p>{product.conditionNote}</p>
+                    {product.composition && (
+                      <p className="text-xs">Composition: {product.composition}</p>
+                    )}
                   </div>
                 )}
                 {tab === "Measurements" && (
                   <dl className="grid gap-3 sm:grid-cols-2">
                     {product.measurements.map((m) => (
-                      <div key={m.label} className="flex justify-between border-b border-border pb-2">
+                      <div
+                        key={m.label}
+                        className="flex justify-between border-b border-border pb-2"
+                      >
                         <dt>{m.label}</dt>
                         <dd className="text-foreground">{m.value}</dd>
                       </div>
@@ -294,7 +534,8 @@ function ProductPage() {
                 {tab === "Provenance" && (
                   <div className="space-y-3">
                     <p className="text-foreground">
-                      {product.provenance.atelier}, {product.provenance.city} — {product.provenance.year}
+                      {product.provenance.atelier}, {product.provenance.city} —{" "}
+                      {product.provenance.year}
                     </p>
                     <p>{product.provenance.note}</p>
                   </div>

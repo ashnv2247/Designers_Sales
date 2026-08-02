@@ -15,7 +15,10 @@ export const Route = createFileRoute("/cart")({
           "Review the pieces in your DesignerSale bag, adjust sizes and quantities, then continue to a secure checkout.",
       },
       { property: "og:title", content: "Your Shopping Bag | DesignerSale" },
-      { property: "og:description", content: "Review your selected pieces and continue to checkout." },
+      {
+        property: "og:description",
+        content: "Review your selected pieces and continue to checkout.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -49,8 +52,12 @@ function CartPage() {
           <div className="mt-14 grid gap-16 lg:grid-cols-[1.4fr_0.6fr]">
             <ul className="border-t border-border">
               {lines.map((l) => (
-                <li key={`${l.id}-${l.size}`} className="flex gap-5 border-b border-border py-7">
-                  <Link to="/product/$id" params={{ id: l.id }} className="w-24 shrink-0 md:w-28">
+                <li key={l.variantId} className="flex gap-5 border-b border-border py-7">
+                  <Link
+                    to="/product/$id"
+                    params={{ id: l.productId }}
+                    className="w-24 shrink-0 md:w-28"
+                  >
                     <img src={l.image} alt={l.name} className="aspect-[3/4] w-full object-cover" />
                   </Link>
                   <div className="flex flex-1 flex-col justify-between">
@@ -59,7 +66,7 @@ function CartPage() {
                         <p className="rule-label text-muted-foreground">{l.designer}</p>
                         <Link
                           to="/product/$id"
-                          params={{ id: l.id }}
+                          params={{ id: l.productId }}
                           className="mt-1.5 block font-serif text-lg leading-snug"
                         >
                           {l.name}
@@ -69,7 +76,7 @@ function CartPage() {
                         </p>
                       </div>
                       <button
-                        onClick={() => remove(l.id, l.size)}
+                        onClick={() => remove(l.variantId)}
                         aria-label={`Remove ${l.name}`}
                         className="p-1 text-muted-foreground transition-colors hover:text-foreground"
                       >
@@ -79,7 +86,7 @@ function CartPage() {
                     <div className="mt-5 flex items-end justify-between">
                       <div className="flex items-center border border-border">
                         <button
-                          onClick={() => setQuantity(l.id, l.size, l.quantity - 1)}
+                          onClick={() => setQuantity(l.variantId, l.quantity - 1)}
                           aria-label="Decrease quantity"
                           className="px-3 py-2 text-sm hover:bg-cream"
                         >
@@ -87,7 +94,7 @@ function CartPage() {
                         </button>
                         <span className="min-w-8 text-center text-sm">{l.quantity}</span>
                         <button
-                          onClick={() => setQuantity(l.id, l.size, l.quantity + 1)}
+                          onClick={() => setQuantity(l.variantId, l.quantity + 1)}
                           aria-label="Increase quantity"
                           className="px-3 py-2 text-sm hover:bg-cream"
                         >

@@ -5,9 +5,7 @@ import { stablePublicId } from "./cloudinary.js";
 describe("seed tooling", () => {
   it("validates the extracted application data", () => expect(validateSeedData(seed)).toEqual([]));
   it("generates deterministic public IDs", () =>
-    expect(stablePublicId("src/assets/products/bags-1.jpg")).toBe(
-      "designer-sales/seed/products/bags-1",
-    ));
+    expect(stablePublicId("src/assets/products/bags-1.jpg")).toBe("products-bags-1"));
   it("guards reset mode", () =>
     expect(() => assertResetAllowed({ NODE_ENV: "development" })).toThrow(
       /ALLOW_DESTRUCTIVE_SEED/,

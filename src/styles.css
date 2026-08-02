@@ -2,6 +2,63 @@
 @source "../src";
 @import "tw-animate-css";
 
+@keyframes skeleton-shimmer {
+  100% { transform: translateX(100%); }
+}
+
+.skeleton-shimmer {
+  position: relative;
+  overflow: hidden;
+  background-color: rgb(0 0 0 / 0.07);
+  background-color: color-mix(in srgb, currentColor 10%, transparent);
+}
+
+/* Explicit container context blending for dark backgrounds (e.g. olive-deep hero section) */
+.bg-olive-deep .skeleton-shimmer,
+.bg-olive .skeleton-shimmer,
+.bg-forest .skeleton-shimmer,
+.bg-ink .skeleton-shimmer,
+.bg-charcoal .skeleton-shimmer,
+.dark .skeleton-shimmer,
+[class*="bg-olive"] .skeleton-shimmer,
+[class*="bg-ink"] .skeleton-shimmer {
+  background-color: rgb(255 255 255 / 0.1);
+}
+
+.skeleton-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in srgb, currentColor 20%, transparent) 50%,
+    transparent 100%
+  );
+  animation: skeleton-shimmer 1.6s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.bg-olive-deep .skeleton-shimmer::after,
+.bg-olive .skeleton-shimmer::after,
+.bg-forest .skeleton-shimmer::after,
+.bg-ink .skeleton-shimmer::after,
+.bg-charcoal .skeleton-shimmer::after,
+.dark .skeleton-shimmer::after,
+[class*="bg-olive"] .skeleton-shimmer::after,
+[class*="bg-ink"] .skeleton-shimmer::after {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgb(255 255 255 / 0.16) 50%,
+    transparent 100%
+  );
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-shimmer::after { animation: none; }
+}
+
 @custom-variant dark (&:is(.dark *));
 
 /*
@@ -48,6 +105,9 @@
   --color-olive: var(--olive);
   --color-olive-deep: var(--olive-deep);
   --color-olive-soft: var(--olive-soft);
+  --color-burgundy: var(--burgundy);
+  --color-forest: var(--forest);
+  --color-soft-grey: var(--soft-grey);
 
   --ease-luxe: cubic-bezier(0.22, 1, 0.36, 1);
 }
@@ -65,6 +125,10 @@
   --olive-deep: oklch(0.265 0.036 126);
   --olive: oklch(0.335 0.044 124);
   --olive-soft: oklch(0.918 0.021 120);
+  
+  --burgundy: oklch(0.28 0.08 15);
+  --forest: oklch(0.25 0.04 140);
+  --soft-grey: oklch(0.94 0.006 80);
 
   --background: var(--ivory);
   --foreground: var(--ink);
@@ -155,28 +219,6 @@
 }
 
 /* ── Motion ─────────────────────────────────────────────── */
-
-@utility reveal {
-  opacity: 0;
-  transform: translateY(24px);
-  transition:
-    opacity 800ms var(--ease-luxe),
-    transform 800ms var(--ease-luxe);
-
-  &[data-visible="true"] {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-@utility veil-reveal {
-  clip-path: inset(0 0 100% 0);
-  transition: clip-path 1000ms var(--ease-luxe);
-
-  &[data-visible="true"] {
-    clip-path: inset(0 0 0 0);
-  }
-}
 
 @utility ken-burns {
   animation: kenburns 24s var(--ease-luxe) infinite alternate;

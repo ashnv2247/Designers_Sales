@@ -2,15 +2,21 @@ import { useState } from "react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import {
+  Award,
   Bell,
+  Boxes,
   ChevronDown,
   FileText,
+  Folder,
+  Grid,
   PanelsTopLeft,
   LayoutDashboard,
   LogOut,
+  Mail,
   Menu,
   Package,
   Search,
+  Send,
   ShoppingBag,
   Store,
   Tag,
@@ -20,7 +26,12 @@ import {
 
 import { supabase } from "@/integrations/supabase/client";
 
-type Item = { to: string; label: string; icon: React.ComponentType<{ className?: string }>; exact?: boolean };
+type Item = {
+  to: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  exact?: boolean;
+};
 
 const SECTIONS: { heading: string; items: Item[] }[] = [
   {
@@ -28,24 +39,37 @@ const SECTIONS: { heading: string; items: Item[] }[] = [
     items: [{ to: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true }],
   },
   {
+    heading: "Catalogue",
+    items: [
+      { to: "/admin/products", label: "Products", icon: Package },
+      { to: "/admin/inventory", label: "Inventory", icon: Boxes },
+      { to: "/admin/brands", label: "Brands", icon: Award },
+      { to: "/admin/categories", label: "Categories", icon: Folder },
+      { to: "/admin/product-types", label: "Product Types", icon: Grid },
+      { to: "/admin/merchants", label: "Merchants", icon: Store },
+    ],
+  },
+  {
+    heading: "Merchandising",
+    items: [
+      { to: "/admin/sales", label: "Sales", icon: Tag },
+      { to: "/admin/curated-pages", label: "Curated Pages", icon: PanelsTopLeft },
+    ],
+  },
+  {
     heading: "Commerce",
     items: [
       { to: "/admin/orders", label: "Orders", icon: ShoppingBag },
-      { to: "/admin/products", label: "Products", icon: Package },
-      { to: "/admin/merchants", label: "Merchants", icon: Store },
-      { to: "/admin/sales", label: "Sales", icon: Tag },
+      { to: "/admin/customers", label: "Customers", icon: Users },
     ],
   },
   {
     heading: "Content",
     items: [
       { to: "/admin/blog", label: "Blog Posts", icon: FileText },
-      { to: "/admin/curated-pages", label: "Curated Pages", icon: PanelsTopLeft },
+      { to: "/admin/contact-inquiries", label: "Contact Enquiries", icon: Mail },
+      { to: "/admin/newsletter", label: "Newsletter Subscribers", icon: Send },
     ],
-  },
-  {
-    heading: "Administration",
-    items: [{ to: "/admin/users", label: "Users & Roles", icon: Users }],
   },
 ];
 
@@ -86,7 +110,13 @@ function NavList({ onNavigate }: { onNavigate?: () => void }) {
   );
 }
 
-export function AdminShell({ email, children }: { email?: string | null; children: React.ReactNode }) {
+export function AdminShell({
+  email,
+  children,
+}: {
+  email?: string | null;
+  children: React.ReactNode;
+}) {
   const [drawer, setDrawer] = useState(false);
   const [menu, setMenu] = useState(false);
   const navigate = useNavigate();
@@ -120,7 +150,9 @@ export function AdminShell({ email, children }: { email?: string | null; childre
           <div className="absolute inset-0 bg-foreground/40" onClick={() => setDrawer(false)} />
           <div className="absolute inset-y-0 left-0 w-[17rem] overflow-y-auto bg-card shadow-xl">
             <div className="flex h-16 items-center justify-between border-b border-border px-5">
-              <span className="text-sm font-semibold uppercase tracking-[0.18em]">DesignerSale</span>
+              <span className="text-sm font-semibold uppercase tracking-[0.18em]">
+                DesignerSale
+              </span>
               <button onClick={() => setDrawer(false)} aria-label="Close navigation">
                 <X className="h-4 w-4" />
               </button>
@@ -159,7 +191,9 @@ export function AdminShell({ email, children }: { email?: string | null; childre
             <button
               className="relative rounded-md p-2 hover:bg-muted"
               aria-label="Notifications"
-              onClick={() => navigate({ to: "/admin/orders", search: { status: "confirmed" } as any })}
+              onClick={() =>
+                navigate({ to: "/admin/orders", search: { status: "confirmed" } as any })
+              }
             >
               <Bell className="h-4 w-4" />
             </button>
@@ -171,7 +205,9 @@ export function AdminShell({ email, children }: { email?: string | null; childre
                 <span className="flex h-6 w-6 items-center justify-center rounded-full bg-foreground text-[0.6rem] text-background">
                   {(email ?? "A").slice(0, 1).toUpperCase()}
                 </span>
-                <span className="hidden max-w-[12rem] truncate sm:inline">{email ?? "Administrator"}</span>
+                <span className="hidden max-w-[12rem] truncate sm:inline">
+                  {email ?? "Administrator"}
+                </span>
                 <ChevronDown className="h-3.5 w-3.5" />
               </button>
               {menu && (

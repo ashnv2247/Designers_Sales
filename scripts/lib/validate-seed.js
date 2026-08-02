@@ -9,6 +9,7 @@ export function validateSeedData(data) {
     }
   };
   unique(data.categories, "slug", "category");
+  unique(data.productTypes ?? [], "slug", "product type");
   unique(data.brands, "slug", "brand");
   unique(data.merchants, "slug", "merchant");
   unique(data.products, "slug", "product");
@@ -20,6 +21,9 @@ export function validateSeedData(data) {
   const cats = new Set(data.categories.map((x) => x.slug)),
     brands = new Set(data.brands.map((x) => x.slug)),
     merchants = new Set(data.merchants.map((x) => x.slug));
+  for (const type of data.productTypes ?? []) {
+    if (!cats.has(type.categorySlug)) errors.push(`${type.slug}: unknown product type category`);
+  }
   for (const p of data.products) {
     if (!cats.has(p.categorySlug)) errors.push(`${p.slug}: unknown category`);
     if (!brands.has(p.brandSlug)) errors.push(`${p.slug}: unknown brand`);

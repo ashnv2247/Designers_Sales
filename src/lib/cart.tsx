@@ -1,14 +1,8 @@
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-  type ReactNode,
-} from "react";
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
 export interface CartLine {
-  id: string;
+  variantId: string;
+  productId: string;
   name: string;
   designer: string;
   image: string;
@@ -23,17 +17,15 @@ interface CartValue {
   count: number;
   subtotalCents: number;
   add: (line: Omit<CartLine, "quantity">, quantity?: number) => void;
-  setQuantity: (id: string, size: string, quantity: number) => void;
-  remove: (id: string, size: string) => void;
+  setQuantity: (variantId: string, quantity: number) => void;
+  remove: (variantId: string) => void;
   clear: () => void;
   hydrated: boolean;
 }
 
-const STORAGE_KEY = "designersale.cart.v1";
+const STORAGE_KEY = "designersale.cart.v3";
 
 const CartContext = createContext<CartValue | null>(null);
-
-const key = (id: string, size: string) => `${id}::${size}`;
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [lines, setLines] = useState<CartLine[]>([]);
@@ -66,25 +58,25 @@ export function CartProvider({ children }: { children: ReactNode }) {
       subtotalCents: lines.reduce((n, l) => n + l.unitPriceCents * l.quantity, 0),
       add: (line, quantity = 1) =>
         setLines((prev) => {
-          const existing = prev.find((l) => key(l.id, l.size) === key(line.id, line.size));
+          const existing = prev.find((l) => l.variantId === line.variantId);
           if (existing) {
             return prev.map((l) =>
-              key(l.id, l.size) === key(line.id, line.size)
+              l.variantId === line.variantId
                 ? { ...l, quantity: Math.min(9, l.quantity + quantity) }
                 : l,
             );
           }
           return [...prev, { ...line, quantity }];
         }),
-      setQuantity: (id, size, quantity) =>
+      setQuantity: (variantId, quantity) =>
         setLines((prev) =>
           quantity <= 0
-            ? prev.filter((l) => key(l.id, l.size) !== key(id, size))
+            ? prev.filter((l) => l.variantId !== variantId)
             : prev.map((l) =>
-                key(l.id, l.size) === key(id, size) ? { ...l, quantity: Math.min(9, quantity) } : l,
+                l.variantId === variantId ? { ...l, quantity: Math.min(9, quantity) } : l,
               ),
         ),
-      remove: (id, size) => setLines((prev) => prev.filter((l) => key(l.id, l.size) !== key(id, size))),
+      remove: (variantId) => setLines((prev) => prev.filter((l) => l.variantId !== variantId)),
       clear: () => setLines([]),
     };
   }, [lines, hydrated]);

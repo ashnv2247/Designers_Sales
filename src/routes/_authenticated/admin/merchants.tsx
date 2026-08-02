@@ -4,7 +4,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { Btn, Check, Field, Panel, SelectInput, TextArea, TextInput } from "@/components/admin/ui";
+import { Btn, Check, Field, SelectInput, TextArea, TextInput } from "@/components/admin/ui";
+import { AdminModal } from "@/components/admin/AdminModal";
 import { adminListMerchants, adminUpdateMerchant } from "@/lib/admin.functions";
 import {
   adminCreateMerchant,
@@ -116,7 +117,7 @@ function MerchantForm({
       <div>
         <CloudinaryImageUploader
           label="Logo"
-          folder="merchants/logos"
+          entityType="designer"
           value={logo.url}
           publicId={logo.publicId}
           onChange={(v) => setLogo({ url: v?.url ?? "", publicId: v?.publicId ?? "" })}
@@ -127,7 +128,7 @@ function MerchantForm({
       <div>
         <CloudinaryImageUploader
           label="Cover image"
-          folder="merchants/covers"
+          entityType="designer"
           value={cover.url}
           publicId={cover.publicId}
           onChange={(v) => setCover({ url: v?.url ?? "", publicId: v?.publicId ?? "" })}
@@ -180,7 +181,7 @@ function AdminMerchants() {
   const remove = useServerFn(adminDeleteMerchant);
   const qc = useQueryClient();
   const [showNew, setShowNew] = useState(false);
-  const [openId, setOpenId] = useState<string | null>(null);
+  const [editingMerchant, setEditingMerchant] = useState<any | null>(null);
 
   const { data, isPending, error } = useQuery({
     queryKey: ["admin-merchants"],
@@ -217,7 +218,7 @@ function AdminMerchants() {
     mutationFn: (vars: any) => edit({ data: vars }),
     onSuccess: () => {
       toast.success("Merchant saved");
-      setOpenId(null);
+      setEditingMerchant(null);
       invalidate();
     },
     onError: (e: Error) => toast.error(e.message || "Could not save that merchant"),
@@ -238,19 +239,43 @@ function AdminMerchants() {
 
   return (
     <>
-      <div className="mb-8">
-        <Btn onClick={() => setShowNew((v) => !v)}>{showNew ? "Close" : "New merchant"}</Btn>
+      <div className="mb-8 flex justify-between items-center">
+        <h2 className="text-lg font-serif">Merchants & Boutiques</h2>
+        <Btn onClick={() => setShowNew(true)}>+ New merchant</Btn>
       </div>
 
-      {showNew && (
-        <Panel title="New merchant">
+      {/* Create Merchant Modal */}
+      <AdminModal
+        open={showNew}
+        onOpenChange={setShowNew}
+        title="Create New Merchant"
+        description="Add a boutique atelier or partner merchant to DesignerSale."
+      >
+        <MerchantForm
+          onSubmit={(v) => createMut.mutate(v)}
+          pending={createMut.isPending}
+          submitLabel="Create Merchant"
+        />
+      </AdminModal>
+
+      {/* Edit Merchant Modal */}
+      <AdminModal
+        open={Boolean(editingMerchant)}
+        onOpenChange={(open) => {
+          if (!open) setEditingMerchant(null);
+        }}
+        title={`Edit Merchant — ${editingMerchant?.name ?? ""}`}
+        description="Update merchant contact details, images, status and social links."
+      >
+        {editingMerchant && (
           <MerchantForm
-            onSubmit={(v) => createMut.mutate(v)}
-            pending={createMut.isPending}
-            submitLabel="Create merchant"
+            merchant={editingMerchant}
+            onSubmit={(v) => editMut.mutate({ id: editingMerchant.id, ...v })}
+            pending={editMut.isPending}
+            submitLabel="Save Merchant"
           />
-        </Panel>
-      )}
+        )}
+      </AdminModal>
 
       {(data as any[]).length === 0 && (
         <p className="text-sm text-muted-foreground">No merchants yet.</p>
@@ -261,7 +286,7 @@ function AdminMerchants() {
           <li key={m.id} className="border-b border-border py-5">
             <div className="grid gap-4 md:grid-cols-[1fr_auto] md:items-center">
               <div>
-                <p className="text-sm">{m.name}</p>
+                <p className="text-sm font-medium">{m.name}</p>
                 <p className="mt-1 text-xs text-muted-foreground">
                   {[m.city, m.country].filter(Boolean).join(", ") || "Location not set"}
                   {m.email ? ` · ${m.email}` : ""}
@@ -291,8 +316,8 @@ function AdminMerchants() {
                     </option>
                   ))}
                 </select>
-                <Btn variant="ghost" onClick={() => setOpenId(openId === m.id ? null : m.id)}>
-                  {openId === m.id ? "Close" : "Edit"}
+                <Btn variant="ghost" onClick={() => setEditingMerchant(m)}>
+                  Edit
                 </Btn>
                 <Btn
                   variant="danger"
@@ -304,16 +329,6 @@ function AdminMerchants() {
                 </Btn>
               </div>
             </div>
-            {openId === m.id && (
-              <div className="mt-6 border-t border-dashed border-border pt-6">
-                <MerchantForm
-                  merchant={m}
-                  onSubmit={(v) => editMut.mutate({ id: m.id, ...v })}
-                  pending={editMut.isPending}
-                  submitLabel="Save merchant"
-                />
-              </div>
-            )}
           </li>
         ))}
       </ul>

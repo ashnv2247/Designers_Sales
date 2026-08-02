@@ -24,7 +24,10 @@ export const RANGE_OPTIONS: { key: RangeKey; label: string }[] = [
 
 export function resolveRange(key: RangeKey, from?: string, to?: string) {
   if (key === "custom" && from && to) {
-    return { from: new Date(`${from}T00:00:00`).toISOString(), to: new Date(`${to}T23:59:59`).toISOString() };
+    return {
+      from: new Date(`${from}T00:00:00`).toISOString(),
+      to: new Date(`${to}T23:59:59`).toISOString(),
+    };
   }
   const now = new Date();
   const end = now.toISOString();
@@ -123,9 +126,11 @@ export function downloadCsv(filename: string, rows: Record<string, unknown>[]) {
 export function friendlyError(message: string) {
   if (/duplicate key.*slug/i.test(message)) return "A record with this slug already exists.";
   if (/duplicate key.*sku/i.test(message)) return "This SKU is already in use.";
-  if (/foreign key/i.test(message)) return "This record is still referenced elsewhere and cannot be deleted.";
+  if (/foreign key/i.test(message))
+    return "This record is still referenced elsewhere and cannot be deleted.";
   if (/forbidden|row-level security|permission/i.test(message))
     return "You do not have permission to perform this action.";
-  if (/jwt|session|unauthor/i.test(message)) return "The session has expired. Please sign in again.";
+  if (/jwt|session|unauthor/i.test(message))
+    return "The session has expired. Please sign in again.";
   return "Something went wrong. Please try again.";
 }

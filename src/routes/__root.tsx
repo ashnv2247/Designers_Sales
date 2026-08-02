@@ -118,11 +118,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className="bg-[#faf9f5]" style={{ backgroundColor: "#faf9f5" }}>
       <head>
         <HeadContent />
       </head>
-      <body>
+      <body className="bg-[#faf9f5] text-ink antialiased" style={{ backgroundColor: "#faf9f5" }}>
         {children}
         <Scripts />
       </body>
@@ -133,7 +133,6 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const router = useRouter();
-
   useEffect(() => {
     const { data } = supabase.auth.onAuthStateChange((event) => {
       if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
@@ -146,8 +145,10 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <CartProvider>
-        {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-        <Outlet />
+        <div className="relative min-h-screen bg-[#faf9f5]">
+          {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+          <Outlet />
+        </div>
         <Toaster />
       </CartProvider>
     </QueryClientProvider>

@@ -80,6 +80,13 @@ export const categories = [
   },
 ];
 
+export const productTypes = [
+  { slug: "designer-dresses", name: "Designer Dresses", categorySlug: "dresses" },
+  { slug: "coats-and-jackets", name: "Coats & Jackets", categorySlug: "outerwear" },
+  { slug: "designer-bags", name: "Designer Bags", categorySlug: "bags" },
+  { slug: "fine-jewellery", name: "Fine Jewellery", categorySlug: "jewellery" },
+];
+
 export const brands = [
   "Zimmermann",
   "Camilla and Marc",

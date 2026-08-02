@@ -26,7 +26,8 @@ function rgbToOklch(r: number, g: number, b: number) {
 }
 
 const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
-const ok = (l: number, c: number, h: number) => `oklch(${l.toFixed(3)} ${c.toFixed(3)} ${h.toFixed(1)})`;
+const ok = (l: number, c: number, h: number) =>
+  `oklch(${l.toFixed(3)} ${c.toFixed(3)} ${h.toFixed(1)})`;
 
 /**
  * Reads the average colour of an image and returns design-token overrides so

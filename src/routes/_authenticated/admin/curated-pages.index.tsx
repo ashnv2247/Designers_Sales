@@ -11,6 +11,10 @@ import {
   adminSaveCuratedPage,
 } from "@/lib/curated-pages.functions";
 
+import { useState } from "react";
+import { AdminModal } from "@/components/admin/AdminModal";
+import { CuratedPageForm } from "@/components/admin/curated/CuratedPageForm";
+
 const searchSchema = z.object({
   page: z.coerce.number().min(1).catch(1),
   title: z.string().optional(),
@@ -33,6 +37,7 @@ function List() {
   const search = Route.useSearch();
   const nav = useNavigate();
   const qc = useQueryClient();
+  const [showNew, setShowNew] = useState(false);
   const list = useServerFn(adminListCuratedPages),
     del = useServerFn(adminDeleteCuratedPage),
     dup = useServerFn(adminDuplicateCuratedPage),
@@ -80,10 +85,19 @@ function List() {
             Build and publish editorial storefront experiences.
           </p>
         </div>
-        <Link to="/admin/curated-pages/new" className={primary}>
-          New page
-        </Link>
+        <button onClick={() => setShowNew(true)} className={primary}>
+          + New page
+        </button>
       </div>
+
+      <AdminModal
+        open={showNew}
+        onOpenChange={setShowNew}
+        title="Create Curated Page"
+        description="Set up page titles, hero media, and publishing status."
+      >
+        <CuratedPageForm />
+      </AdminModal>
       <div className="mb-4 flex gap-2 overflow-x-auto">
         {[
           ["", "All"],
@@ -324,7 +338,7 @@ function Skeleton() {
   return (
     <div className="space-y-2">
       {Array.from({ length: 5 }, (_, i) => (
-        <div key={i} className="h-16 animate-pulse rounded bg-muted" />
+        <div key={i} className="skeleton-shimmer h-16 rounded" />
       ))}
     </div>
   );

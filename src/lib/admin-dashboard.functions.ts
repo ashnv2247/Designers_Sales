@@ -3,7 +3,12 @@ import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assertAdmin, type AdminCtx } from "@/lib/admin-guard.server";
-import { isRevenueOrder, LOW_STOCK_THRESHOLD, resolveRange, type RangeKey } from "@/lib/admin-metrics";
+import {
+  isRevenueOrder,
+  LOW_STOCK_THRESHOLD,
+  resolveRange,
+  type RangeKey,
+} from "@/lib/admin-metrics";
 
 const rangeInput = z.object({
   range: z.enum(["today", "7d", "30d", "90d", "all", "custom"]).default("30d"),
@@ -35,14 +40,15 @@ export const getAdminDashboard = createServerFn({ method: "GET" })
     const [orders, items, products, merchants, variants, users, sales] = await Promise.all([
       ordersQuery.limit(5000),
       itemsQuery.limit(5000),
-      sb.from("products").select("id, name, status, created_at").order("created_at", { ascending: false }),
-      sb.from("merchants").select("id, name, status, created_at").order("created_at", { ascending: false }),
       sb
-        .from("product_variants")
-        .select("id, sku, stock_quantity, is_available, products(name)")
-        .lte("stock_quantity", LOW_STOCK_THRESHOLD)
-        .order("stock_quantity", { ascending: true })
-        .limit(12),
+        .from("products")
+        .select("id, name, status, created_at")
+        .order("created_at", { ascending: false }),
+      sb
+        .from("merchants")
+        .select("id, name, status, created_at")
+        .order("created_at", { ascending: false }),
+      sb.from("products").select("id, sku, status, name").eq("status", "sold_out").limit(12),
       sb
         .from("users")
         .select("id, display_name, email, created_at")
@@ -76,9 +82,17 @@ export const getAdminDashboard = createServerFn({ method: "GET" })
       return [...m.entries()].map(([status, value]) => ({ status, value }));
     };
 
-    const topMap = new Map<string, { name: string; designer: string; units: number; revenue: number }>();
+    const topMap = new Map<
+      string,
+      { name: string; designer: string; units: number; revenue: number }
+    >();
     for (const i of itemRows) {
-      const row = topMap.get(i.name) ?? { name: i.name, designer: i.designer, units: 0, revenue: 0 };
+      const row = topMap.get(i.name) ?? {
+        name: i.name,
+        designer: i.designer,
+        units: 0,
+        revenue: 0,
+      };
       row.units += i.quantity ?? 0;
       row.revenue += ((i.unit_price_cents ?? 0) * (i.quantity ?? 0)) / 100;
       topMap.set(i.name, row);
@@ -97,7 +111,8 @@ export const getAdminDashboard = createServerFn({ method: "GET" })
           0,
         ),
         ordersToday: orderRows.filter((o) => String(o.created_at).slice(0, 10) === todayKey).length,
-        pendingOrders: orderRows.filter((o) => o.status === "confirmed" || o.status === "preparing").length,
+        pendingOrders: orderRows.filter((o) => o.status === "confirmed" || o.status === "preparing")
+          .length,
         deliveredOrders: count(orderRows, "status", "delivered"),
         cancelledOrders: count(orderRows, "status", "cancelled"),
         totalProducts: productRows.length,
@@ -116,10 +131,10 @@ export const getAdminDashboard = createServerFn({ method: "GET" })
       topProducts,
       lowStock: ((variants.data ?? []) as any[]).map((v) => ({
         id: v.id,
-        sku: v.sku,
-        stock: v.stock_quantity,
-        available: v.is_available,
-        product: v.products?.name ?? "—",
+        sku: v.sku ?? "—",
+        stock: 0,
+        available: false,
+        product: v.name ?? "—",
       })),
       recentOrders: orderRows.slice(0, 8),
       pendingMerchantList: merchantRows.filter((m) => m.status === "pending").slice(0, 6),

@@ -4,13 +4,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { Btn, Field, Panel, SelectInput, TextArea, TextInput } from "@/components/admin/ui";
+import { Btn, Field, SelectInput, TextInput } from "@/components/admin/ui";
+import { AdminModal } from "@/components/admin/AdminModal";
 import {
-  adminCreateBlogCategory,
   adminCreateBlogPost,
   adminDeleteBlogPost,
   adminEditBlogPost,
-  adminGetRefs,
   adminListBlogPosts,
 } from "@/lib/admin-content.functions";
 import { CloudinaryImageUploader } from "@/components/admin/CloudinaryImageUploader";
@@ -36,13 +35,11 @@ export const Route = createFileRoute("/_authenticated/admin/blog")({
 
 function PostForm({
   post,
-  categories,
   onSubmit,
   pending,
   submitLabel,
 }: {
   post?: any;
-  categories: any[];
   onSubmit: (v: any) => void;
   pending: boolean;
   submitLabel: string;
@@ -51,6 +48,8 @@ function PostForm({
     url: post?.featured_image_url ?? "",
     publicId: post?.featured_image_public_id ?? "",
   });
+  const [tagsText, setTagsText] = useState((post?.tags ?? []).join(", "));
+
   return (
     <form
       className="grid gap-5 md:grid-cols-2"
@@ -61,26 +60,19 @@ function PostForm({
           title: String(f.get("title")),
           excerpt: String(f.get("excerpt") ?? ""),
           content: String(f.get("content")),
-          category_id: String(f.get("category_id") ?? ""),
           featured_image_url: String(f.get("featured_image_url") ?? ""),
           featured_image_public_id: String(f.get("featured_image_public_id") ?? ""),
           status: String(f.get("status")),
           is_featured: f.get("is_featured") === "on",
+          tags: tagsText
+            .split(",")
+            .map((t: string) => t.trim())
+            .filter((t: string) => t.length > 0),
         });
       }}
     >
       <Field label="Title">
         <TextInput name="title" defaultValue={post?.title ?? ""} required />
-      </Field>
-      <Field label="Category">
-        <SelectInput name="category_id" defaultValue={post?.category_id ?? ""}>
-          <option value="">None</option>
-          {categories.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </SelectInput>
       </Field>
       <Field label="Status">
         <SelectInput name="status" defaultValue={post?.status ?? "draft"}>
@@ -91,10 +83,19 @@ function PostForm({
           ))}
         </SelectInput>
       </Field>
-      <div>
+      <div className="md:col-span-2">
+        <Field label="Tags (Comma separated, e.g. resort, trend-report, quiet-luxury)">
+          <TextInput
+            value={tagsText}
+            onChange={(e) => setTagsText(e.target.value)}
+            placeholder="resort, editorial"
+          />
+        </Field>
+      </div>
+      <div className="md:col-span-2">
         <CloudinaryImageUploader
           label="Featured image"
-          folder="blog"
+          entityType="collection"
           value={featured.url}
           publicId={featured.publicId}
           onChange={(v) => setFeatured({ url: v?.url ?? "", publicId: v?.publicId ?? "" })}
@@ -138,19 +139,14 @@ function AdminBlog() {
   const create = useServerFn(adminCreateBlogPost);
   const edit = useServerFn(adminEditBlogPost);
   const remove = useServerFn(adminDeleteBlogPost);
-  const createCategory = useServerFn(adminCreateBlogCategory);
-  const getRefs = useServerFn(adminGetRefs);
   const qc = useQueryClient();
   const [showNew, setShowNew] = useState(false);
-  const [openId, setOpenId] = useState<string | null>(null);
-  const [newCategory, setNewCategory] = useState("");
+  const [editingPost, setEditingPost] = useState<any | null>(null);
 
   const { data, isPending, error } = useQuery({
     queryKey: ["admin-posts"],
     queryFn: () => list({}),
   });
-  const { data: refs } = useQuery({ queryKey: ["admin-refs"], queryFn: () => getRefs({}) });
-  const categories = ((refs as any)?.blogCategories ?? []) as any[];
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ["admin-posts"] });
 
@@ -168,7 +164,7 @@ function AdminBlog() {
     mutationFn: (v: any) => edit({ data: v }),
     onSuccess: () => {
       toast.success("Story saved");
-      setOpenId(null);
+      setEditingPost(null);
       invalidate();
     },
     onError: (e: Error) => toast.error(e.message || "Could not save that story"),
@@ -183,51 +179,49 @@ function AdminBlog() {
     onError: (e: Error) => toast.error(e.message || "Could not delete that story"),
   });
 
-  const categoryMut = useMutation({
-    mutationFn: (name: string) => createCategory({ data: { name } }),
-    onSuccess: () => {
-      toast.success("Category added");
-      setNewCategory("");
-      qc.invalidateQueries({ queryKey: ["admin-refs"] });
-    },
-    onError: (e: Error) => toast.error(e.message || "Could not add that category"),
-  });
-
   if (isPending) return <p className="text-sm text-muted-foreground">Loading journal…</p>;
   if (error || !data)
     return <p className="text-sm text-muted-foreground">We couldn't load the journal.</p>;
 
   return (
     <>
-      <div className="mb-8 flex flex-wrap items-end gap-4">
-        <Btn onClick={() => setShowNew((v) => !v)}>{showNew ? "Close" : "New story"}</Btn>
-        <div className="flex items-end gap-3">
-          <TextInput
-            value={newCategory}
-            onChange={(e) => setNewCategory(e.target.value)}
-            placeholder="New category"
-            className="max-w-xs"
-          />
-          <Btn
-            variant="ghost"
-            disabled={!newCategory.trim() || categoryMut.isPending}
-            onClick={() => categoryMut.mutate(newCategory.trim())}
-          >
-            Add category
-          </Btn>
-        </div>
+      <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
+        <h2 className="text-lg font-serif">Journal & Editorial Stories</h2>
+        <Btn onClick={() => setShowNew(true)}>+ New story</Btn>
       </div>
 
-      {showNew && (
-        <Panel title="New story">
+      {/* Create Story Modal */}
+      <AdminModal
+        open={showNew}
+        onOpenChange={setShowNew}
+        title="Create New Story"
+        description="Publish an editorial story, trend report or designer profile."
+      >
+        <PostForm
+          onSubmit={(v) => createMut.mutate(v)}
+          pending={createMut.isPending}
+          submitLabel="Publish Story"
+        />
+      </AdminModal>
+
+      {/* Edit Story Modal */}
+      <AdminModal
+        open={Boolean(editingPost)}
+        onOpenChange={(open) => {
+          if (!open) setEditingPost(null);
+        }}
+        title={`Edit Story — ${editingPost?.title ?? ""}`}
+        description="Update article content, images, status and tags."
+      >
+        {editingPost && (
           <PostForm
-            categories={categories}
-            onSubmit={(v) => createMut.mutate(v)}
-            pending={createMut.isPending}
-            submitLabel="Create story"
+            post={editingPost}
+            onSubmit={(v) => editMut.mutate({ id: editingPost.id, ...v })}
+            pending={editMut.isPending}
+            submitLabel="Save Story"
           />
-        </Panel>
-      )}
+        )}
+      </AdminModal>
 
       {(data as any[]).length === 0 && (
         <p className="text-sm text-muted-foreground">No stories yet.</p>
@@ -238,14 +232,15 @@ function AdminBlog() {
           <li key={p.id} className="border-b border-border py-5">
             <div className="grid gap-4 md:grid-cols-[1fr_auto] md:items-center">
               <div>
-                <p className="text-sm">{p.title}</p>
+                <p className="text-sm font-medium">{p.title}</p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  {p.blog_categories?.name ?? "Uncategorised"} · {p.status}
+                  Tags: {p.tags?.join(", ") || "None"} ·{" "}
+                  <span className="capitalize">{p.status}</span>
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-4">
-                <Btn variant="ghost" onClick={() => setOpenId(openId === p.id ? null : p.id)}>
-                  {openId === p.id ? "Close" : "Edit"}
+                <Btn variant="ghost" onClick={() => setEditingPost(p)}>
+                  Edit
                 </Btn>
                 <Btn
                   variant="danger"
@@ -257,17 +252,6 @@ function AdminBlog() {
                 </Btn>
               </div>
             </div>
-            {openId === p.id && (
-              <div className="mt-6 border-t border-dashed border-border pt-6">
-                <PostForm
-                  post={p}
-                  categories={categories}
-                  onSubmit={(v) => editMut.mutate({ id: p.id, ...v })}
-                  pending={editMut.isPending}
-                  submitLabel="Save story"
-                />
-              </div>
-            )}
           </li>
         ))}
       </ul>

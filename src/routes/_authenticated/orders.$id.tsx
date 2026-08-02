@@ -54,14 +54,16 @@ function OrderPage() {
               Thank you — your order is confirmed.
             </h1>
             <p className="mt-6 max-w-xl text-sm leading-relaxed text-muted-foreground">
-              Reference <span className="text-foreground">{data.order.reference}</span>. A confirmation has
-              been sent to {data.order.shipping_email}.
+              Reference <span className="text-foreground">{data.order.reference}</span>. A
+              confirmation has been sent to {data.order.shipping_email}.
             </p>
 
             {/* Status timeline */}
             <ol className="mt-14 grid gap-4 border-y border-border py-8 sm:grid-cols-4">
               {ORDER_STEPS.map((step, i) => {
-                const currentIndex = ORDER_STEPS.indexOf(data.order.status as (typeof ORDER_STEPS)[number]);
+                const currentIndex = ORDER_STEPS.indexOf(
+                  data.order.status as (typeof ORDER_STEPS)[number],
+                );
                 const done = currentIndex >= i && data.order.status !== "cancelled";
                 return (
                   <li key={step} className="flex flex-col gap-3">
@@ -83,15 +85,16 @@ function OrderPage() {
               <ul className="border-t border-border">
                 {data.items.map((it) => (
                   <li key={it.id} className="flex gap-5 border-b border-border py-6">
-                    {it.image && (
-                      <img src={it.image} alt={it.name} className="w-20 object-cover" />
+                    {it.image_url && (
+                      <img src={it.image_url} alt={it.product_name} className="w-20 object-cover" />
                     )}
                     <div className="flex flex-1 items-start justify-between gap-4">
                       <div>
-                        <p className="rule-label text-muted-foreground">{it.designer}</p>
-                        <p className="mt-1.5 font-serif text-lg">{it.name}</p>
+                        <p className="rule-label text-muted-foreground">{it.brand_name}</p>
+                        <p className="mt-1.5 font-serif text-lg">{it.product_name}</p>
                         <p className="mt-1 text-xs text-muted-foreground">
-                          {it.size ? `Size ${it.size} · ` : ""}Qty {it.quantity}
+                          {it.selected_size ? `Size ${it.selected_size} · ` : ""}
+                          {it.selected_color ? `${it.selected_color} · ` : ""}Qty {it.quantity}
                         </p>
                       </div>
                       <p className="text-sm">{money(it.unit_price_cents * it.quantity)}</p>

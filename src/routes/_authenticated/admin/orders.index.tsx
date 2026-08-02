@@ -15,7 +15,11 @@ import {
   PaginationControls,
   StatusBadge,
 } from "@/components/admin/kit";
-import { adminOrdersExport, adminOrdersPage, adminSetOrderStatus } from "@/lib/admin-orders.functions";
+import {
+  adminOrdersExport,
+  adminOrdersPage,
+  adminSetOrderStatus,
+} from "@/lib/admin-orders.functions";
 import { downloadCsv, formatDate, friendlyError, humanStatus } from "@/lib/admin-metrics";
 import { money } from "@/lib/cart";
 
@@ -38,7 +42,10 @@ export const Route = createFileRoute("/_authenticated/admin/orders/")({
   head: () => ({
     meta: [
       { title: "Orders | DesignerSale Admin" },
-      { name: "description", content: "Search, filter, export and fulfil every DesignerSale order." },
+      {
+        name: "description",
+        content: "Search, filter, export and fulfil every DesignerSale order.",
+      },
       { property: "og:title", content: "Orders | DesignerSale Admin" },
       { property: "og:description", content: "Order management for DesignerSale administrators." },
       { property: "og:type", content: "website" },
@@ -141,7 +148,12 @@ function OrdersList() {
   function bulkStatus(status: (typeof STATUSES)[number]) {
     if (selected.length === 0) return;
     if (status === "cancelled" || status === "delivered") {
-      if (!confirm(`Mark ${selected.length} order(s) as ${humanStatus(status)}? This is hard to undo.`)) return;
+      if (
+        !confirm(
+          `Mark ${selected.length} order(s) as ${humanStatus(status)}? This is hard to undo.`,
+        )
+      )
+        return;
     }
     statusMutation.mutate({ ids: selected, status });
   }
@@ -171,14 +183,15 @@ function OrdersList() {
       />
 
       <div className="mb-4 flex flex-wrap gap-2">
-        <button
-          onClick={() => setFilter({ status: undefined })}
-          className={tab(!search.status)}
-        >
+        <button onClick={() => setFilter({ status: undefined })} className={tab(!search.status)}>
           All
         </button>
         {STATUSES.map((s) => (
-          <button key={s} onClick={() => setFilter({ status: s })} className={tab(search.status === s)}>
+          <button
+            key={s}
+            onClick={() => setFilter({ status: s })}
+            className={tab(search.status === s)}
+          >
             {humanStatus(s)}
           </button>
         ))}
@@ -219,7 +232,9 @@ function OrdersList() {
               type="number"
               min={0}
               value={search.min ?? ""}
-              onChange={(e) => setFilter({ min: e.target.value ? Number(e.target.value) : undefined })}
+              onChange={(e) =>
+                setFilter({ min: e.target.value ? Number(e.target.value) : undefined })
+              }
               placeholder="Min £"
               className={input}
               aria-label="Minimum amount"
@@ -228,7 +243,9 @@ function OrdersList() {
               type="number"
               min={0}
               value={search.max ?? ""}
-              onChange={(e) => setFilter({ max: e.target.value ? Number(e.target.value) : undefined })}
+              onChange={(e) =>
+                setFilter({ max: e.target.value ? Number(e.target.value) : undefined })
+              }
               placeholder="Max £"
               className={input}
               aria-label="Maximum amount"
@@ -250,17 +267,29 @@ function OrdersList() {
               Mark {humanStatus(s)}
             </button>
           ))}
-          <button onClick={() => setSelected([])} className="ml-auto text-muted-foreground hover:underline">
+          <button
+            onClick={() => setSelected([])}
+            className="ml-auto text-muted-foreground hover:underline"
+          >
             Clear
           </button>
         </div>
       )}
 
       <div className="mt-4 overflow-hidden rounded-lg border border-border bg-card shadow-sm">
-        {isPending && <div className="p-4"><LoadingSkeleton /></div>}
-        {error && <ErrorState message={friendlyError((error as Error).message)} onRetry={() => refetch()} />}
+        {isPending && (
+          <div className="p-4">
+            <LoadingSkeleton />
+          </div>
+        )}
+        {error && (
+          <ErrorState message={friendlyError((error as Error).message)} onRetry={() => refetch()} />
+        )}
         {data && rows.length === 0 && (
-          <EmptyState title="No orders match these filters" hint="Try clearing the search or date range." />
+          <EmptyState
+            title="No orders match these filters"
+            hint="Try clearing the search or date range."
+          />
         )}
 
         {data && rows.length > 0 && (
@@ -274,7 +303,9 @@ function OrdersList() {
                         type="checkbox"
                         checked={allSelected}
                         aria-label="Select all orders on this page"
-                        onChange={(e) => setSelected(e.target.checked ? rows.map((r: any) => r.id) : [])}
+                        onChange={(e) =>
+                          setSelected(e.target.checked ? rows.map((r: any) => r.id) : [])
+                        }
                       />
                     </th>
                     <th className="px-4 py-3">Reference</th>
@@ -303,7 +334,11 @@ function OrdersList() {
                         />
                       </td>
                       <td className="px-4 py-3 font-medium">
-                        <Link to="/admin/orders/$id" params={{ id: o.id }} className="hover:underline">
+                        <Link
+                          to="/admin/orders/$id"
+                          params={{ id: o.id }}
+                          className="hover:underline"
+                        >
                           {o.reference}
                         </Link>
                       </td>
@@ -339,7 +374,9 @@ function OrdersList() {
                       <td className="px-4 py-3 text-muted-foreground">
                         {o.shipping_city}, {o.shipping_country}
                       </td>
-                      <td className="px-4 py-3 text-muted-foreground">{formatDate(o.created_at)}</td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {formatDate(o.created_at)}
+                      </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-2">
                           <button
@@ -372,7 +409,9 @@ function OrdersList() {
               pageSize={pageSize}
               total={data.total}
               onPage={(p) => navigate({ search: (prev: any) => ({ ...prev, page: p }) })}
-              onPageSize={(n) => navigate({ search: (prev: any) => ({ ...prev, size: n, page: 1 }) })}
+              onPageSize={(n) =>
+                navigate({ search: (prev: any) => ({ ...prev, size: n, page: 1 }) })
+              }
             />
           </>
         )}
@@ -386,5 +425,7 @@ const input =
 
 const tab = (active: boolean) =>
   `rounded-md border px-3 py-1.5 text-xs transition-colors ${
-    active ? "border-foreground bg-foreground text-background" : "border-border bg-card hover:bg-muted"
+    active
+      ? "border-foreground bg-foreground text-background"
+      : "border-border bg-card hover:bg-muted"
   }`;
