@@ -50,10 +50,15 @@ export const adminGetRefs = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     await assertAdmin(context as Ctx);
     const sb = context.supabase;
-    const [merchants, brands, categories, products] = await Promise.all([
+    const [merchants, brands, categories, productTypes, products] = await Promise.all([
       sb.from("merchants").select("id, name").order("name"),
       sb.from("brands").select("id, name").order("name"),
       sb.from("categories").select("id, name").order("name"),
+      sb
+        .from("product_types")
+        .select("id, name, slug, category_id, is_active")
+        .eq("is_active", true)
+        .order("display_order"),
       sb
         .from("products")
         .select(
@@ -62,7 +67,8 @@ export const adminGetRefs = createServerFn({ method: "GET" })
         .order("name")
         .limit(500),
     ]);
-    const referenceError = merchants.error ?? brands.error ?? categories.error ?? products.error;
+    const referenceError =
+      merchants.error ?? brands.error ?? categories.error ?? productTypes.error ?? products.error;
     if (referenceError) {
       throw new Error(`Could not load admin reference data: ${referenceError.message}`);
     }
@@ -70,8 +76,111 @@ export const adminGetRefs = createServerFn({ method: "GET" })
       merchants: merchants.data ?? [],
       brands: brands.data ?? [],
       categories: categories.data ?? [],
+      productTypes: productTypes.data ?? [],
       products: products.data ?? [],
     };
+  });
+
+/* --------------------------------- banners --------------------------------- */
+
+const bannerInput = z
+  .object({
+    name: z.string().trim().min(2).max(120),
+    eyebrow: optText,
+    headline: z.string().trim().min(2).max(220),
+    highlighted_text: optText,
+    description: optText,
+    image_url: z.string().url(),
+    image_public_id: optText,
+    mobile_image_url: optText,
+    mobile_image_public_id: optText,
+    background_color: z.string().trim().min(1).max(80),
+    accent_color: z.string().trim().min(1).max(80),
+    glow_color: optText,
+    cta_label: optText,
+    target_path: z
+      .union([
+        z
+          .string()
+          .trim()
+          .regex(/^\/[A-Za-z0-9/_?&=.#%-]*$/),
+        z.literal(""),
+      ])
+      .optional()
+      .transform((v) => v || null),
+    display_order: z.number().int().nonnegative().default(0),
+    is_active: z.boolean().default(true),
+    starts_at: optText,
+    ends_at: optText,
+  })
+  .superRefine((value, ctx) => {
+    if (Boolean(value.cta_label) !== Boolean(value.target_path)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "CTA label and target path must be provided together",
+      });
+    }
+  });
+
+export const adminListBanners = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context as Ctx);
+    const { data, error } = await context.supabase
+      .from("banners")
+      .select("*")
+      .order("display_order");
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
+
+export const adminSaveBanner = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ id: uuid.optional(), banner: bannerInput }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context as Ctx);
+    if (data.id) {
+      const { data: old } = await context.supabase
+        .from("banners")
+        .select("image_public_id,mobile_image_public_id")
+        .eq("id", data.id)
+        .single();
+      const { error } = await context.supabase
+        .from("banners")
+        .update(data.banner)
+        .eq("id", data.id);
+      if (error) throw new Error(error.message);
+      await cleanupCloudinary([
+        old?.image_public_id !== data.banner.image_public_id ? old?.image_public_id : null,
+        old?.mobile_image_public_id !== data.banner.mobile_image_public_id
+          ? old?.mobile_image_public_id
+          : null,
+      ]);
+      return { id: data.id };
+    }
+    const { data: row, error } = await context.supabase
+      .from("banners")
+      .insert(data.banner)
+      .select("id")
+      .single();
+    if (error) throw new Error(error.message);
+    return row;
+  });
+
+export const adminDeleteBanner = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ id: uuid }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context as Ctx);
+    const { data: old } = await context.supabase
+      .from("banners")
+      .select("image_public_id,mobile_image_public_id")
+      .eq("id", data.id)
+      .single();
+    const { error } = await context.supabase.from("banners").delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+    await cleanupCloudinary([old?.image_public_id, old?.mobile_image_public_id]);
+    return { ok: true };
   });
 
 /* --------------------------------- merchants -------------------------------- */
@@ -278,12 +387,42 @@ function validateVariantPricing(
   }
 }
 
+async function validateProductTypeAssignment(
+  sb: any,
+  categoryId: string | null | undefined,
+  productTypeId: string | null | undefined,
+) {
+  if (!categoryId) {
+    if (productTypeId) throw new Error("Product type requires a category");
+    return;
+  }
+  const { data: types, error } = await sb
+    .from("product_types")
+    .select("id,category_id,is_active")
+    .eq("category_id", categoryId);
+  if (error) throw new Error(`Could not validate product type: ${error.message}`);
+  if (!types?.length) {
+    if (productTypeId) throw new Error("The selected category has no product types");
+    return;
+  }
+  if (!productTypeId) throw new Error("Product Type is required for the selected category");
+  const selected = types.find((type: any) => type.id === productTypeId);
+  if (!selected)
+    throw new Error("The selected Product Type does not belong to the selected category");
+  if (!selected.is_active) throw new Error("The selected Product Type is inactive");
+}
+
 export const adminCreateProduct = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => productInput.parse(d))
   .handler(async ({ data, context }) => {
     await assertAdmin(context as Ctx);
     const { variants, images, ...productData } = data;
+    await validateProductTypeAssignment(
+      context.supabase,
+      productData.category_id,
+      productData.product_type_id,
+    );
     validateVariantPricing(variants, productData.status);
 
     // Normalize tags
@@ -339,6 +478,20 @@ export const adminEditProduct = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context as Ctx);
     const { id, variants, images, ...productPatch } = data;
+
+    const { data: current, error: currentError } = await context.supabase
+      .from("products")
+      .select("category_id,product_type_id")
+      .eq("id", id)
+      .single();
+    if (currentError) throw new Error(currentError.message);
+    await validateProductTypeAssignment(
+      context.supabase,
+      productPatch.category_id !== undefined ? productPatch.category_id : current.category_id,
+      productPatch.product_type_id !== undefined
+        ? productPatch.product_type_id
+        : current.product_type_id,
+    );
 
     if (variants !== undefined) validateVariantPricing(variants, productPatch.status);
     if (productPatch.status === "published" && variants === undefined) {

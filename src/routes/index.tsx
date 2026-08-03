@@ -139,26 +139,25 @@ function Home() {
                 }}
                 className="text-[0.62rem] font-bold uppercase tracking-[0.3em] px-3 py-1.5 border self-start mb-6"
               >
-                Luxury Clearance Marketplace
+                {active.kicker || "Luxury Clearance Marketplace"}
               </span>
               <h1 className="display text-[clamp(2.8rem,5.5vw,5.2rem)] leading-[0.92] text-ivory">
-                Designer Fashion <br />
+                {active.headline} <br />
                 <span style={{ color: "var(--slide-accent)" }} className="italic font-medium">
-                  Up To 70% Off
+                  {active.highlightedText}
                 </span>
               </h1>
               <p className="mt-6 max-w-lg text-sm md:text-base leading-relaxed text-ivory/80">
-                Discover authentic luxury fashion from Australia's leading boutique network at
-                exclusive clearance prices. 100% authenticated, delivered to your door.
+                {active.description}
               </p>
 
               <div className="mt-9 flex flex-wrap gap-4">
                 <a
-                  href="#search-section"
+                  href={active.targetPath || "#search-section"}
                   style={{ backgroundColor: "var(--slide-accent)" }}
                   className="inline-flex items-center gap-3 px-9 py-4.5 text-[0.65rem] font-bold uppercase tracking-[0.24em] text-ink shadow-lg hover:opacity-90 transition-all duration-300 hover:-translate-y-0.5"
                 >
-                  Shop Sale <ArrowRight />
+                  {active.ctaLabel || "Shop Sale"} <ArrowRight />
                 </a>
                 <Link
                   to="/shop/$category"

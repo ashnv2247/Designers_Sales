@@ -19,6 +19,7 @@ export function validateSeedData(data) {
     "variant",
   );
   const cats = new Set(data.categories.map((x) => x.slug)),
+    types = new Map((data.productTypes ?? []).map((x) => [x.slug, x])),
     brands = new Set(data.brands.map((x) => x.slug)),
     merchants = new Set(data.merchants.map((x) => x.slug));
   for (const type of data.productTypes ?? []) {
@@ -28,6 +29,10 @@ export function validateSeedData(data) {
     if (!cats.has(p.categorySlug)) errors.push(`${p.slug}: unknown category`);
     if (!brands.has(p.brandSlug)) errors.push(`${p.slug}: unknown brand`);
     if (!merchants.has(p.merchantSlug)) errors.push(`${p.slug}: unknown merchant`);
+    const productType = types.get(p.productTypeSlug);
+    if (!productType) errors.push(`${p.slug}: unknown product type`);
+    else if (productType.categorySlug !== p.categorySlug)
+      errors.push(`${p.slug}: product type does not belong to category`);
     if (!p.images.some((x) => x.primary)) errors.push(`${p.slug}: primary image required`);
     if (p.variant.original_price < 0 || p.variant.stock_quantity < 0)
       errors.push(`${p.slug}: invalid price or stock`);

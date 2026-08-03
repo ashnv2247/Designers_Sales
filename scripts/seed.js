@@ -62,6 +62,13 @@ async function image(source, required = true) {
 }
 async function clearSeed() {
   await db
+    .from("banners")
+    .delete()
+    .in(
+      "name",
+      seed.homepageSlides.map((x) => `Homepage ${x.id}`),
+    );
+  await db
     .from("sales")
     .delete()
     .in("slug", ["winter-clearance", "spring-preview", "archive-event"]);
@@ -159,7 +166,32 @@ for (let i = 0; i < seed.productTypes.length; i++) {
     "slug",
     `product type ${row.slug}`,
   );
-  productTypeMap.set(row.categorySlug, saved);
+  productTypeMap.set(row.slug, saved);
+}
+for (let i = 0; i < seed.homepageSlides.length; i++) {
+  const slide = seed.homepageSlides[i];
+  const uploaded = await image(slide.image);
+  await one(
+    "banners",
+    {
+      name: `Homepage ${slide.id}`,
+      eyebrow: slide.kicker,
+      headline: slide.lines.slice(0, -1).join(" "),
+      highlighted_text: slide.lines.at(-1),
+      description: `${slide.caption}. Discover authenticated designer fashion from Australia's leading boutiques.`,
+      image_url: uploaded?.secureUrl ?? slide.image,
+      image_public_id: uploaded?.publicId ?? null,
+      background_color: slide.bg,
+      accent_color: slide.accent,
+      glow_color: slide.bg,
+      cta_label: "Shop Sale",
+      target_path: "/shop/dresses",
+      display_order: i,
+      is_active: true,
+    },
+    "name",
+    `banner ${slide.id}`,
+  );
 }
 for (const row of seed.brands) {
   const saved = await one("brands", row, "slug", `brand ${row.slug}`);
@@ -265,7 +297,7 @@ for (const row of seed.products) {
       merchant_id: merchantMap.get(row.merchantSlug).id,
       brand_id: brandMap.get(row.brandSlug).id,
       category_id: categoryMap.get(row.categorySlug).id,
-      product_type_id: productTypeMap.get(row.categorySlug).id,
+      product_type_id: productTypeMap.get(row.productTypeSlug).id,
       name: row.name,
       slug: row.slug,
       short_description: row.short_description,
@@ -530,6 +562,18 @@ for (const post of posts) {
     "slug",
     `blog post ${post.slug}`,
   );
+}
+
+await one("contact_inquiries", {
+  name: "Amelia Hart", email: "amelia.seed@example.com", subject: "Authentication question",
+  message: "Could you explain the authentication process for archive pieces?", status: "unread",
+}, "email,subject", "contact inquiry");
+await one("newsletter_subscribers", {
+  email: "newsletter.seed@example.com", status: "subscribed",
+}, "email", "newsletter subscriber");
+
+if (!process.env.SEED_TEST_USER_ID) {
+  console.log("Skipping carts, wishlists, and orders: SEED_TEST_USER_ID is not configured");
 }
 
 console.log(

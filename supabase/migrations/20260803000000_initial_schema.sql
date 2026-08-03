@@ -15,6 +15,8 @@ create type public.product_condition as enum ('new', 'new_with_tags', 'new_witho
 create type public.cart_status as enum ('active', 'converted', 'abandoned');
 create type public.content_status as enum ('draft', 'published', 'archived');
 create type public.order_status as enum ('confirmed', 'preparing', 'in_transit', 'delivered', 'cancelled');
+create type public.sale_discount_type as enum ('percentage', 'fixed_amount', 'final_price');
+create type public.sale_discount_base as enum ('original_price', 'current_price');
 
 create or replace function public.update_updated_at_column()
 returns trigger language plpgsql set search_path = public as $$
@@ -144,7 +146,7 @@ create table public.categories (
 -- PRODUCT TYPES
 create table public.product_types (
   id uuid primary key default gen_random_uuid(),
-  category_id uuid references public.categories(id) on delete set null,
+  category_id uuid not null references public.categories(id) on delete restrict,
   name varchar(100) not null,
   slug varchar(120) not null unique,
   description text,
@@ -153,7 +155,8 @@ create table public.product_types (
   display_order integer not null default 0,
   is_active boolean not null default true,
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  unique (id, category_id)
 );
 
 -- PRODUCTS
@@ -161,8 +164,8 @@ create table public.products (
   id uuid primary key default gen_random_uuid(),
   merchant_id uuid not null references public.merchants(id) on delete cascade,
   brand_id uuid references public.brands(id) on delete set null,
-  category_id uuid references public.categories(id) on delete set null,
-  product_type_id uuid references public.product_types(id) on delete set null,
+  category_id uuid references public.categories(id) on delete restrict,
+  product_type_id uuid,
   name varchar(200) not null,
   slug varchar(220) not null unique,
   sku varchar(100) unique,
@@ -198,8 +201,32 @@ create table public.products (
   constraint products_original_price_valid check (original_price >= 0),
   constraint products_discounted_price_valid check (discounted_price is null or discounted_price >= 0),
   constraint products_discount_not_above_original check (discounted_price is null or discounted_price <= original_price),
-  constraint products_measurements_is_object check (jsonb_typeof(measurements) = 'object')
+  constraint products_measurements_is_object check (jsonb_typeof(measurements) = 'object'),
+  constraint products_type_matches_category foreign key (product_type_id, category_id)
+    references public.product_types(id, category_id) on delete restrict
 );
+
+-- A type is required whenever the chosen category defines at least one type.
+create or replace function public.validate_product_type_assignment()
+returns trigger language plpgsql set search_path = public as $$
+begin
+  if new.category_id is null then
+    if new.product_type_id is not null then
+      raise exception 'Product type requires a category' using errcode = '23514';
+    end if;
+    return new;
+  end if;
+  if new.product_type_id is null and exists (
+    select 1 from public.product_types pt where pt.category_id = new.category_id
+  ) then
+    raise exception 'Product type is required for the selected category' using errcode = '23514';
+  end if;
+  return new;
+end $$;
+
+create trigger validate_product_type_assignment
+before insert or update of category_id, product_type_id on public.products
+for each row execute function public.validate_product_type_assignment();
 
 create or replace function public.owns_merchant(_user_id uuid, _merchant_id uuid)
 returns boolean language sql stable security definer set search_path = public as $$
@@ -224,18 +251,17 @@ create table public.product_variants (
   sku varchar(120) unique,
   barcode varchar(120),
   stock_quantity integer not null default 0,
-  original_price_override numeric(12,2),
-  discounted_price_override numeric(12,2),
+  original_price numeric(12,2),
+  discounted_price numeric(12,2),
   is_active boolean not null default true,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint product_variants_stock_non_negative check (stock_quantity >= 0),
-  constraint product_variants_original_price_valid check (original_price_override is null or original_price_override >= 0),
-  constraint product_variants_discounted_price_valid check (discounted_price_override is null or discounted_price_override >= 0),
+  constraint product_variants_original_price_valid check (original_price is null or original_price >= 0),
+  constraint product_variants_discounted_price_valid check (discounted_price is null or discounted_price >= 0),
   constraint product_variant_discount_not_above_original check (
-    discounted_price_override is null 
-    or original_price_override is null 
-    or discounted_price_override <= original_price_override
+    discounted_price is null
+    or (original_price is not null and discounted_price <= original_price)
   ),
   unique (product_id, color_name, size)
 );
@@ -243,6 +269,7 @@ create table public.product_variants (
 create index idx_product_variants_product on public.product_variants(product_id);
 create index idx_product_variants_active on public.product_variants(product_id, is_active);
 create index idx_product_variants_stock on public.product_variants(product_id, stock_quantity);
+create index idx_product_variants_sellable on public.product_variants(product_id, original_price, stock_quantity) where is_active = true;
 
 -- PRODUCT IMAGES
 create table public.product_images (
@@ -393,11 +420,56 @@ create table public.sale_products (
   sale_id uuid not null references public.sales(id) on delete cascade,
   product_id uuid not null references public.products(id) on delete cascade,
   display_order integer not null default 0,
+  discount_type public.sale_discount_type,
+  discount_value numeric(12,2),
+  discount_base public.sale_discount_base not null default 'current_price',
+  original_price_snapshot numeric(12,2),
+  current_price_snapshot numeric(12,2),
+  sale_price numeric(12,2),
+  is_manually_overridden boolean not null default false,
   created_at timestamptz not null default now(),
-  primary key (sale_id, product_id)
+  updated_at timestamptz not null default now(),
+  primary key (sale_id, product_id),
+  constraint sale_products_discount_value_valid check (discount_value is null or discount_value >= 0),
+  constraint sale_products_percentage_valid check (discount_type is distinct from 'percentage' or discount_value between 0 and 100),
+  constraint sale_products_sale_price_valid check (sale_price is null or sale_price >= 0),
+  constraint sale_products_sale_not_above_original check (sale_price is null or original_price_snapshot is null or sale_price <= original_price_snapshot),
+  constraint sale_products_sale_not_above_current check (sale_price is null or current_price_snapshot is null or sale_price <= current_price_snapshot)
 );
 
 create index idx_sales_dates on public.sales(starts_at, ends_at);
+create index idx_sale_products_product on public.sale_products(product_id);
+create index idx_sale_products_sale_price on public.sale_products(sale_id, sale_price);
+
+-- HOMEPAGE BANNERS
+create table public.banners (
+  id uuid primary key default gen_random_uuid(),
+  name varchar(120) not null unique,
+  eyebrow varchar(160),
+  headline varchar(220) not null,
+  highlighted_text varchar(160),
+  description text,
+  image_url text not null,
+  image_public_id text,
+  mobile_image_url text,
+  mobile_image_public_id text,
+  background_color varchar(80) not null default '#1f2937',
+  accent_color varchar(80) not null default '#d6b36a',
+  glow_color varchar(80),
+  cta_label varchar(80),
+  target_path text,
+  display_order integer not null default 0,
+  is_active boolean not null default true,
+  starts_at timestamptz,
+  ends_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint banners_target_internal check (target_path is null or target_path ~ '^/[A-Za-z0-9/_?&=.#%-]*$'),
+  constraint banners_cta_complete check ((cta_label is null) = (target_path is null)),
+  constraint banners_dates_valid check (ends_at is null or starts_at is null or ends_at > starts_at)
+);
+create index idx_banners_active_order on public.banners(is_active, display_order);
+create index idx_product_types_category on public.product_types(category_id, display_order);
 
 -- CURATED PAGES
 create table public.curated_pages (
@@ -483,7 +555,8 @@ create table public.contact_inquiries (
   message text not null,
   status varchar(50) not null default 'unread',
   created_at timestamptz not null default now(),
-  constraint contact_inquiries_status_valid check (status in ('unread', 'read', 'resolved', 'spam'))
+  constraint contact_inquiries_status_valid check (status in ('unread', 'read', 'resolved', 'spam')),
+  unique (email, subject)
 );
 
 -- NEWSLETTER SUBSCRIBERS
@@ -534,6 +607,7 @@ alter table public.merchants enable row level security;
 alter table public.brands enable row level security;
 alter table public.categories enable row level security;
 alter table public.product_types enable row level security;
+alter table public.banners enable row level security;
 alter table public.products enable row level security;
 alter table public.product_variants enable row level security;
 alter table public.product_images enable row level security;
@@ -587,6 +661,12 @@ create policy categories_admin_all on public.categories for all to authenticated
 -- Product types policies
 create policy product_types_public_read on public.product_types for select using (is_active);
 create policy product_types_admin_all on public.product_types for all to authenticated using (public.has_role(auth.uid(), 'admin')) with check (public.has_role(auth.uid(), 'admin'));
+
+create policy banners_public_read on public.banners for select using (
+  is_active and (starts_at is null or starts_at <= now()) and (ends_at is null or ends_at > now())
+);
+create policy banners_admin_all on public.banners for all to authenticated
+  using (public.has_role(auth.uid(), 'admin')) with check (public.has_role(auth.uid(), 'admin'));
 
 -- Products policies
 create policy products_public_read on public.products for select using (status in ('published','sold_out'));
@@ -671,12 +751,14 @@ create trigger update_merchants_updated_at before update on public.merchants for
 create trigger update_brands_updated_at before update on public.brands for each row execute function public.update_updated_at_column();
 create trigger update_categories_updated_at before update on public.categories for each row execute function public.update_updated_at_column();
 create trigger update_product_types_updated_at before update on public.product_types for each row execute function public.update_updated_at_column();
+create trigger update_banners_updated_at before update on public.banners for each row execute function public.update_updated_at_column();
 create trigger update_products_updated_at before update on public.products for each row execute function public.update_updated_at_column();
 create trigger update_product_variants_updated_at before update on public.product_variants for each row execute function public.update_updated_at_column();
 create trigger update_carts_updated_at before update on public.carts for each row execute function public.update_updated_at_column();
 create trigger update_cart_items_updated_at before update on public.cart_items for each row execute function public.update_updated_at_column();
 create trigger update_wishlists_updated_at before update on public.wishlists for each row execute function public.update_updated_at_column();
 create trigger update_sales_updated_at before update on public.sales for each row execute function public.update_updated_at_column();
+create trigger update_sale_products_updated_at before update on public.sale_products for each row execute function public.update_updated_at_column();
 create trigger update_curated_pages_updated_at before update on public.curated_pages for each row execute function public.update_updated_at_column();
 create trigger update_blog_posts_updated_at before update on public.blog_posts for each row execute function public.update_updated_at_column();
 
@@ -702,7 +784,7 @@ do $$
 declare t text;
 begin
   foreach t in array array[
-    'brands','categories','product_types','merchants','product_variants','product_images','products',
+    'brands','categories','product_types','merchants','product_variants','product_images','products','banners',
     'sale_products','sales','curated_pages','curated_page_products','blog_posts'
   ] loop
     execute format('grant select on public.%I to anon', t);
@@ -720,5 +802,135 @@ begin
   grant select, insert on public.contact_inquiries to anon;
   grant insert on public.newsletter_subscribers to anon;
 end $$;
+
+grant all privileges on all tables in schema public to service_role;
+grant all privileges on all sequences in schema public to service_role;
+grant execute on all functions in schema public to service_role;
+alter default privileges for role postgres in schema public grant all privileges on tables to service_role;
+alter default privileges for role postgres in schema public grant all privileges on sequences to service_role;
+alter default privileges for role postgres in schema public grant execute on functions to service_role;
+
+-- Atomic sale management with variant-authoritative pricing.
+create or replace function public.save_sale_with_products(p_sale jsonb, p_products jsonb)
+returns uuid
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare
+  v_sale_id uuid := nullif(p_sale->>'id', '')::uuid;
+  v_item jsonb;
+  v_product_id uuid;
+  v_original numeric(12,2);
+  v_current numeric(12,2);
+  v_base numeric(12,2);
+  v_sale_price numeric(12,2);
+  v_type public.sale_discount_type;
+  v_discount_base public.sale_discount_base;
+  v_value numeric(12,2);
+  v_existing public.sale_products%rowtype;
+begin
+  if not public.has_role(auth.uid(), 'admin') then raise exception 'Forbidden'; end if;
+
+  if v_sale_id is null then
+    v_sale_id := gen_random_uuid();
+    insert into public.sales(id, merchant_id, name, slug, description, banner_image_url,
+      banner_image_public_id, mobile_banner_image_url, mobile_banner_image_public_id,
+      starts_at, ends_at, is_active, is_featured)
+    values (v_sale_id, nullif(p_sale->>'merchant_id','')::uuid, p_sale->>'name',
+      regexp_replace(lower(trim(p_sale->>'name')), '[^a-z0-9]+', '-', 'g') || '-' || left(v_sale_id::text, 6),
+      nullif(p_sale->>'description',''), nullif(p_sale->>'banner_image_url',''),
+      nullif(p_sale->>'banner_image_public_id',''), nullif(p_sale->>'mobile_banner_image_url',''),
+      nullif(p_sale->>'mobile_banner_image_public_id',''), nullif(p_sale->>'starts_at','')::timestamptz,
+      nullif(p_sale->>'ends_at','')::timestamptz, coalesce((p_sale->>'is_active')::boolean,true),
+      coalesce((p_sale->>'is_featured')::boolean,false));
+  else
+    update public.sales set
+      merchant_id = nullif(p_sale->>'merchant_id','')::uuid,
+      name = p_sale->>'name', description = nullif(p_sale->>'description',''),
+      banner_image_url = nullif(p_sale->>'banner_image_url',''),
+      banner_image_public_id = nullif(p_sale->>'banner_image_public_id',''),
+      mobile_banner_image_url = nullif(p_sale->>'mobile_banner_image_url',''),
+      mobile_banner_image_public_id = nullif(p_sale->>'mobile_banner_image_public_id',''),
+      starts_at = nullif(p_sale->>'starts_at','')::timestamptz,
+      ends_at = nullif(p_sale->>'ends_at','')::timestamptz,
+      is_active = (p_sale->>'is_active')::boolean, is_featured = (p_sale->>'is_featured')::boolean
+    where id = v_sale_id;
+    if not found then raise exception 'Sale not found'; end if;
+  end if;
+
+  delete from public.sale_products sp where sp.sale_id = v_sale_id
+    and not exists (select 1 from jsonb_array_elements(p_products) x where (x->>'product_id')::uuid = sp.product_id);
+
+  for v_item in select * from jsonb_array_elements(p_products) loop
+    v_product_id := (v_item->>'product_id')::uuid;
+    v_type := (v_item->>'discount_type')::public.sale_discount_type;
+    v_discount_base := coalesce((v_item->>'discount_base')::public.sale_discount_base, 'current_price');
+    v_value := (v_item->>'discount_value')::numeric;
+    if v_value is null or v_value < 0 then raise exception 'Invalid discount for product %', v_product_id; end if;
+
+    select * into v_existing from public.sale_products where sale_id = v_sale_id and product_id = v_product_id;
+    if v_existing.product_id is not null
+      and v_existing.original_price_snapshot is not null
+      and v_existing.current_price_snapshot is not null
+      and not coalesce((v_item->>'refresh_snapshots')::boolean,false) then
+      v_original := v_existing.original_price_snapshot;
+      v_current := v_existing.current_price_snapshot;
+    else
+      select pv.original_price, coalesce(pv.discounted_price,pv.original_price)
+      into v_original, v_current from public.product_variants pv
+      where pv.product_id = v_product_id and pv.is_active and pv.original_price is not null
+      order by coalesce(pv.discounted_price,pv.original_price) asc limit 1;
+    end if;
+    if v_original is null or v_current is null then raise exception 'Product % has no valid variant pricing', v_product_id; end if;
+
+    v_base := case when v_discount_base = 'original_price' then v_original else v_current end;
+    if v_type = 'percentage' then
+      if v_value > 100 then raise exception 'Percentage cannot exceed 100'; end if;
+      v_sale_price := round(v_base * (1 - v_value / 100), 2);
+    elsif v_type = 'fixed_amount' then
+      if v_value > v_base then raise exception 'Fixed discount exceeds base price'; end if;
+      v_sale_price := round(v_base - v_value, 2);
+    else v_sale_price := round(v_value, 2);
+    end if;
+    if v_sale_price < 0 or v_sale_price > v_original or v_sale_price > v_current then
+      raise exception 'Invalid calculated sale price for product %', v_product_id;
+    end if;
+    if exists (
+      select 1 from public.product_variants pv
+      where pv.product_id = v_product_id and pv.is_active and pv.original_price is not null
+      and (
+        case
+          when v_type = 'percentage' then round(
+            (case when v_discount_base = 'original_price' then pv.original_price else coalesce(pv.discounted_price,pv.original_price) end)
+            * (1 - v_value / 100), 2)
+          when v_type = 'fixed_amount' then round(
+            (case when v_discount_base = 'original_price' then pv.original_price else coalesce(pv.discounted_price,pv.original_price) end)
+            - v_value, 2)
+          else round(v_value, 2)
+        end
+      ) not between 0 and coalesce(pv.discounted_price,pv.original_price)
+    ) then
+      raise exception 'Discount is invalid for one or more variants of product %', v_product_id;
+    end if;
+
+    insert into public.sale_products(sale_id, product_id, display_order, discount_type,
+      discount_value, discount_base, original_price_snapshot, current_price_snapshot,
+      sale_price, is_manually_overridden)
+    values(v_sale_id, v_product_id, coalesce((v_item->>'display_order')::int,0), v_type,
+      v_value, v_discount_base, v_original, v_current, v_sale_price,
+      coalesce((v_item->>'is_manually_overridden')::boolean,false))
+    on conflict (sale_id,product_id) do update set
+      display_order=excluded.display_order, discount_type=excluded.discount_type,
+      discount_value=excluded.discount_value, discount_base=excluded.discount_base,
+      original_price_snapshot=excluded.original_price_snapshot,
+      current_price_snapshot=excluded.current_price_snapshot, sale_price=excluded.sale_price,
+      is_manually_overridden=excluded.is_manually_overridden;
+  end loop;
+  return v_sale_id;
+end $$;
+
+revoke all on function public.save_sale_with_products(jsonb,jsonb) from public, anon;
+grant execute on function public.save_sale_with_products(jsonb,jsonb) to authenticated, service_role;
 
 commit;

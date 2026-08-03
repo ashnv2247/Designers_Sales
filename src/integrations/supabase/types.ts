@@ -6,6 +6,78 @@ export type Database = {
   };
   public: {
     Tables: {
+      banners: {
+        Row: {
+          id: string;
+          name: string;
+          eyebrow: string | null;
+          headline: string;
+          highlighted_text: string | null;
+          description: string | null;
+          image_url: string;
+          image_public_id: string | null;
+          mobile_image_url: string | null;
+          mobile_image_public_id: string | null;
+          background_color: string;
+          accent_color: string;
+          glow_color: string | null;
+          cta_label: string | null;
+          target_path: string | null;
+          display_order: number;
+          is_active: boolean;
+          starts_at: string | null;
+          ends_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          eyebrow?: string | null;
+          headline: string;
+          highlighted_text?: string | null;
+          description?: string | null;
+          image_url: string;
+          image_public_id?: string | null;
+          mobile_image_url?: string | null;
+          mobile_image_public_id?: string | null;
+          background_color?: string;
+          accent_color?: string;
+          glow_color?: string | null;
+          cta_label?: string | null;
+          target_path?: string | null;
+          display_order?: number;
+          is_active?: boolean;
+          starts_at?: string | null;
+          ends_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          eyebrow?: string | null;
+          headline?: string;
+          highlighted_text?: string | null;
+          description?: string | null;
+          image_url?: string;
+          image_public_id?: string | null;
+          mobile_image_url?: string | null;
+          mobile_image_public_id?: string | null;
+          background_color?: string;
+          accent_color?: string;
+          glow_color?: string | null;
+          cta_label?: string | null;
+          target_path?: string | null;
+          display_order?: number;
+          is_active?: boolean;
+          starts_at?: string | null;
+          ends_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       profiles: {
         Row: {
           id: string;

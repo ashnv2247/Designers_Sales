@@ -15,6 +15,8 @@
     "seed:dry-run": "node scripts/seed.js --dry-run",
     "seed:reset": "node scripts/seed.js --reset",
     "seed:skip-images": "node scripts/seed.js --skip-images",
+    "products:audit-types": "node scripts/audit-product-types.js",
+    "products:backfill-types": "node scripts/audit-product-types.js --apply",
     "format": "prettier --write ."
   },
   "dependencies": {

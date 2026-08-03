@@ -350,6 +350,7 @@ export const getHomepageContent = createServerFn({ method: "GET" }).handler(asyn
     { data: page, error: pageError },
     { data: categoriesData, error: catError },
     { data: merchantsData, error: merchError },
+    { data: bannersData, error: bannerError },
   ] = await Promise.all([
     supabase
       .from("curated_pages")
@@ -364,11 +365,21 @@ export const getHomepageContent = createServerFn({ method: "GET" }).handler(asyn
       .eq("status", "approved")
       .eq("is_active", true)
       .eq("is_featured", true),
+    supabase
+      .from("banners")
+      .select(
+        "id,name,eyebrow,headline,highlighted_text,description,image_url,mobile_image_url,background_color,accent_color,glow_color,cta_label,target_path,display_order",
+      )
+      .eq("is_active", true)
+      .or(`starts_at.is.null,starts_at.lte.${new Date().toISOString()}`)
+      .or(`ends_at.is.null,ends_at.gt.${new Date().toISOString()}`)
+      .order("display_order"),
   ]);
 
   if (pageError) throw new Error(pageError.message);
   if (catError) throw new Error(catError.message);
   if (merchError) throw new Error(merchError.message);
+  // Banners deliberately degrade to the bundled hero when the table is unavailable.
 
   const homeProducts = (page?.curated_page_products ?? [])
     .sort((a: any, b: any) => a.display_order - b.display_order)
@@ -377,10 +388,31 @@ export const getHomepageContent = createServerFn({ method: "GET" }).handler(asyn
     )
     .filter(Boolean);
 
-  const slides = homepageSlides.map((slide) => ({
-    ...slide,
-    kicker: slide.kicker,
-  }));
+  const slides =
+    !bannerError && bannersData?.length
+      ? bannersData.map((banner: any) => ({
+          id: banner.id,
+          image: banner.image_url,
+          mobileImage: banner.mobile_image_url,
+          kicker: banner.eyebrow ?? "",
+          headline: banner.headline,
+          highlightedText: banner.highlighted_text ?? "",
+          description: banner.description ?? "",
+          bg: banner.background_color,
+          accent: banner.accent_color,
+          glow: banner.glow_color ?? banner.background_color,
+          ctaLabel: banner.cta_label,
+          targetPath: banner.target_path,
+        }))
+      : homepageSlides.map((slide) => ({
+          ...slide,
+          headline: "Designer Fashion",
+          highlightedText: "Up To 70% Off",
+          description:
+            "Discover authentic luxury fashion from Australia's leading boutique network at exclusive clearance prices. 100% authenticated, delivered to your door.",
+          ctaLabel: "Shop Sale",
+          targetPath: "/#search-section",
+        }));
 
   return {
     slides,

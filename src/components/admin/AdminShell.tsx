@@ -10,6 +10,7 @@ import {
   Folder,
   Grid,
   PanelsTopLeft,
+  Image,
   LayoutDashboard,
   LogOut,
   Mail,
@@ -52,6 +53,7 @@ const SECTIONS: { heading: string; items: Item[] }[] = [
   {
     heading: "Merchandising",
     items: [
+      { to: "/admin/banners", label: "Banners", icon: Image },
       { to: "/admin/sales", label: "Sales", icon: Tag },
       { to: "/admin/curated-pages", label: "Curated Pages", icon: PanelsTopLeft },
     ],

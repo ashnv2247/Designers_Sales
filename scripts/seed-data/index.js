@@ -235,6 +235,7 @@ export const products = categories.flatMap((category) =>
       name,
       slug: `${category.slug}-${index}`,
       categorySlug: category.slug,
+      productTypeSlug: productTypes.find((type) => type.categorySlug === category.slug).slug,
       brandSlug: brand.slug,
       merchantSlug: merchant.slug,
       condition: conditions[index % conditions.length],

@@ -27,6 +27,7 @@ import { Route as ShopIndexRouteImport } from './routes/shop.index'
 import { Route as ShopCategoryRouteImport } from './routes/shop.$category'
 import { Route as StyleTagRouteImport } from './routes/style.$tag'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin/index'
+import { Route as AuthenticatedAdminBannersRouteImport } from './routes/_authenticated/admin/banners'
 import { Route as AuthenticatedAdminBlogRouteImport } from './routes/_authenticated/admin/blog'
 import { Route as AuthenticatedAdminBrandsRouteImport } from './routes/_authenticated/admin/brands'
 import { Route as AuthenticatedAdminCategoriesRouteImport } from './routes/_authenticated/admin/categories'
@@ -139,6 +140,12 @@ const AuthenticatedAdminIndexRoute = AuthenticatedAdminIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthenticatedAdminRouteRoute,
 } as any)
+const AuthenticatedAdminBannersRoute =
+  AuthenticatedAdminBannersRouteImport.update({
+    id: '/banners',
+    path: '/banners',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
 const AuthenticatedAdminBlogRoute = AuthenticatedAdminBlogRouteImport.update({
   id: '/blog',
   path: '/blog',
@@ -285,6 +292,7 @@ export interface FileRoutesByFullPath {
   '/shop/$category': typeof ShopCategoryRoute
   '/style/$tag': typeof StyleTagRoute
   '/shop/': typeof ShopIndexRoute
+  '/admin/banners': typeof AuthenticatedAdminBannersRoute
   '/admin/blog': typeof AuthenticatedAdminBlogRoute
   '/admin/brands': typeof AuthenticatedAdminBrandsRoute
   '/admin/categories': typeof AuthenticatedAdminCategoriesRoute
@@ -325,6 +333,7 @@ export interface FileRoutesByTo {
   '/shop/$category': typeof ShopCategoryRoute
   '/style/$tag': typeof StyleTagRoute
   '/shop': typeof ShopIndexRoute
+  '/admin/banners': typeof AuthenticatedAdminBannersRoute
   '/admin/blog': typeof AuthenticatedAdminBlogRoute
   '/admin/brands': typeof AuthenticatedAdminBrandsRoute
   '/admin/categories': typeof AuthenticatedAdminCategoriesRoute
@@ -368,6 +377,7 @@ export interface FileRoutesById {
   '/shop/$category': typeof ShopCategoryRoute
   '/style/$tag': typeof StyleTagRoute
   '/shop/': typeof ShopIndexRoute
+  '/_authenticated/admin/banners': typeof AuthenticatedAdminBannersRoute
   '/_authenticated/admin/blog': typeof AuthenticatedAdminBlogRoute
   '/_authenticated/admin/brands': typeof AuthenticatedAdminBrandsRoute
   '/_authenticated/admin/categories': typeof AuthenticatedAdminCategoriesRoute
@@ -411,6 +421,7 @@ export interface FileRouteTypes {
     | '/shop/$category'
     | '/style/$tag'
     | '/shop/'
+    | '/admin/banners'
     | '/admin/blog'
     | '/admin/brands'
     | '/admin/categories'
@@ -451,6 +462,7 @@ export interface FileRouteTypes {
     | '/shop/$category'
     | '/style/$tag'
     | '/shop'
+    | '/admin/banners'
     | '/admin/blog'
     | '/admin/brands'
     | '/admin/categories'
@@ -493,6 +505,7 @@ export interface FileRouteTypes {
     | '/shop/$category'
     | '/style/$tag'
     | '/shop/'
+    | '/_authenticated/admin/banners'
     | '/_authenticated/admin/blog'
     | '/_authenticated/admin/brands'
     | '/_authenticated/admin/categories'
@@ -661,6 +674,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/admin/'
       preLoaderRoute: typeof AuthenticatedAdminIndexRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
+    '/_authenticated/admin/banners': {
+      id: '/_authenticated/admin/banners'
+      path: '/banners'
+      fullPath: '/admin/banners'
+      preLoaderRoute: typeof AuthenticatedAdminBannersRouteImport
       parentRoute: typeof AuthenticatedAdminRouteRoute
     }
     '/_authenticated/admin/blog': {
@@ -839,6 +859,7 @@ const AuthenticatedAdminCuratedPagesIdRouteWithChildren =
   )
 
 interface AuthenticatedAdminRouteRouteChildren {
+  AuthenticatedAdminBannersRoute: typeof AuthenticatedAdminBannersRoute
   AuthenticatedAdminBlogRoute: typeof AuthenticatedAdminBlogRoute
   AuthenticatedAdminBrandsRoute: typeof AuthenticatedAdminBrandsRoute
   AuthenticatedAdminCategoriesRoute: typeof AuthenticatedAdminCategoriesRoute
@@ -862,6 +883,7 @@ interface AuthenticatedAdminRouteRouteChildren {
 
 const AuthenticatedAdminRouteRouteChildren: AuthenticatedAdminRouteRouteChildren =
   {
+    AuthenticatedAdminBannersRoute: AuthenticatedAdminBannersRoute,
     AuthenticatedAdminBlogRoute: AuthenticatedAdminBlogRoute,
     AuthenticatedAdminBrandsRoute: AuthenticatedAdminBrandsRoute,
     AuthenticatedAdminCategoriesRoute: AuthenticatedAdminCategoriesRoute,

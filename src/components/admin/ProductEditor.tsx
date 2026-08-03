@@ -21,6 +21,7 @@ type Refs = {
   merchants: { id: string; name: string }[];
   brands: { id: string; name: string }[];
   categories: { id: string; name: string }[];
+  productTypes: { id: string; name: string; category_id: string }[];
 };
 
 export function ProductEditor({ productId, refs }: { productId: string; refs: Refs }) {
@@ -42,6 +43,8 @@ export function ProductEditor({ productId, refs }: { productId: string; refs: Re
   const [materials, setMaterials] = useState<string[]>([]);
   const [measurements, setMeasurements] = useState<{ key: string; val: string }[]>([]);
   const [tagsInput, setTagsInput] = useState("");
+  const [categoryId, setCategoryId] = useState("");
+  const [productTypeId, setProductTypeId] = useState("");
 
   // New variant form states
   const [newColorName, setNewColorName] = useState("");
@@ -63,6 +66,8 @@ export function ProductEditor({ productId, refs }: { productId: string; refs: Re
       setMeasurements(Object.entries(mObj).map(([k, v]) => ({ key: k, val: String(v) })));
 
       setTagsInput((p.tags ?? []).join(", "));
+      setCategoryId(p.category_id ?? "");
+      setProductTypeId(p.product_type_id ?? "");
     }
   }, [data]);
 
@@ -335,13 +340,44 @@ export function ProductEditor({ productId, refs }: { productId: string; refs: Re
           </SelectInput>
         </Field>
         <Field label="Category">
-          <SelectInput name="category_id" defaultValue={p.category_id || ""}>
+          <SelectInput
+            name="category_id"
+            value={categoryId}
+            onChange={(e) => {
+              setCategoryId(e.target.value);
+              setProductTypeId("");
+            }}
+          >
             <option value="">None</option>
             {refs.categories.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name}
               </option>
             ))}
+          </SelectInput>
+        </Field>
+        <Field label="Product Type">
+          <SelectInput
+            name="product_type_id"
+            value={productTypeId}
+            onChange={(e) => setProductTypeId(e.target.value)}
+            disabled={!categoryId || !refs.productTypes.some((t) => t.category_id === categoryId)}
+            required={Boolean(
+              categoryId && refs.productTypes.some((t) => t.category_id === categoryId),
+            )}
+          >
+            <option value="">
+              {categoryId && !refs.productTypes.some((t) => t.category_id === categoryId)
+                ? "No product types for this category"
+                : "Select a product type"}
+            </option>
+            {refs.productTypes
+              .filter((t) => t.category_id === categoryId)
+              .map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
           </SelectInput>
         </Field>
         <Field label="Status">

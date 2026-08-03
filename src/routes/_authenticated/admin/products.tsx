@@ -48,8 +48,10 @@ function AdminProducts() {
   const qc = useQueryClient();
   const [q, setQ] = useState("");
   const [pricingFilter, setPricingFilter] = useState<"all" | "needs-pricing">("all");
+  const [productTypeFilter, setProductTypeFilter] = useState("all");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState<string>("");
+  const [newCategoryId, setNewCategoryId] = useState("");
   const [showNew, setShowNew] = useState(false);
 
   const { data, isPending, error } = useQuery({
@@ -101,7 +103,11 @@ function AdminProducts() {
     const needsPricing = !(p.product_variants ?? []).some(
       (variant: any) => variant.is_active && variant.original_price != null,
     );
-    return matchesSearch && (pricingFilter === "all" || needsPricing);
+    return (
+      matchesSearch &&
+      (pricingFilter === "all" || needsPricing) &&
+      (productTypeFilter === "all" || p.product_type_id === productTypeFilter)
+    );
   });
 
   return (
@@ -115,6 +121,18 @@ function AdminProducts() {
           className="w-full max-w-sm border border-border bg-transparent px-4 py-3 text-sm outline-none focus:border-foreground"
         />
         <div className="flex gap-3">
+          <SelectInput
+            aria-label="Filter by product type"
+            value={productTypeFilter}
+            onChange={(e) => setProductTypeFilter(e.target.value)}
+          >
+            <option value="all">All product types</option>
+            {(refs as any)?.productTypes?.map((type: any) => (
+              <option key={type.id} value={type.id}>
+                {type.name}
+              </option>
+            ))}
+          </SelectInput>
           <SelectInput
             aria-label="Filter by pricing status"
             value={pricingFilter}
@@ -145,6 +163,7 @@ function AdminProducts() {
                 merchant_id: String(f.get("merchant_id")),
                 brand_id: String(f.get("brand_id") ?? ""),
                 category_id: String(f.get("category_id") ?? ""),
+                product_type_id: String(f.get("product_type_id") ?? ""),
                 short_description: String(f.get("short_description") ?? ""),
                 description: String(f.get("description") ?? ""),
                 condition: String(f.get("condition")),
@@ -180,13 +199,45 @@ function AdminProducts() {
               </SelectInput>
             </Field>
             <Field label="Category">
-              <SelectInput name="category_id" defaultValue="">
+              <SelectInput
+                name="category_id"
+                value={newCategoryId}
+                onChange={(e) => setNewCategoryId(e.target.value)}
+              >
                 <option value="">None</option>
                 {(refs as any).categories.map((c: any) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
                   </option>
                 ))}
+              </SelectInput>
+            </Field>
+            <Field label="Product Type">
+              <SelectInput
+                name="product_type_id"
+                defaultValue=""
+                disabled={
+                  !newCategoryId ||
+                  !(refs as any).productTypes.some((t: any) => t.category_id === newCategoryId)
+                }
+                required={Boolean(
+                  newCategoryId &&
+                  (refs as any).productTypes.some((t: any) => t.category_id === newCategoryId),
+                )}
+              >
+                <option value="">
+                  {newCategoryId &&
+                  !(refs as any).productTypes.some((t: any) => t.category_id === newCategoryId)
+                    ? "No product types for this category"
+                    : "Select a product type"}
+                </option>
+                {(refs as any).productTypes
+                  .filter((t: any) => t.category_id === newCategoryId)
+                  .map((t: any) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
+                    </option>
+                  ))}
               </SelectInput>
             </Field>
             <Field label="Condition">
