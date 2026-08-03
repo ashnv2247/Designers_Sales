@@ -484,3 +484,39 @@ export const listPublicCuratedPages = createServerFn({ method: "GET" }).handler(
   if (error) throw new Error(error.message);
   return data ?? [];
 });
+
+export const getActiveCampaign = createServerFn({ method: "GET" }).handler(async () => {
+  const supabase = serverClient();
+  const nowStr = new Date().toISOString();
+  const { data: sale, error } = await supabase
+    .from("sales")
+    .select(
+      `
+      id, name, slug, description, banner_image_url, mobile_banner_image_url, starts_at, ends_at, is_featured, is_active,
+      sale_products (
+        product_id,
+        display_order
+      )
+    `,
+    )
+    .eq("is_active", true)
+    .or(`starts_at.is.null,starts_at.lte.${nowStr}`)
+    .or(`ends_at.is.null,ends_at.gt.${nowStr}`)
+    .order("is_featured", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+  return sale;
+});
+
+export const getBrandsList = createServerFn({ method: "GET" }).handler(async () => {
+  const supabase = serverClient();
+  const { data, error } = await supabase
+    .from("brands")
+    .select("id, name, slug, logo_url, is_featured, is_active")
+    .eq("is_active", true)
+    .order("name");
+  if (error) throw new Error(error.message);
+  return data ?? [];
+});

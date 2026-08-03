@@ -20,19 +20,19 @@ DESIGN PHILOSOPHY
 
 The website should feel like:
 
- Apple
+Apple
 
- Net-a-Porter
+Net-a-Porter
 
- Vogue
+Vogue
 
- COS
+COS
 
- SSENSE
+SSENSE
 
- Zara Studio
+Zara Studio
 
- Aesop
+Aesop
 
 rather than a traditional ecommerce website.
 
@@ -40,21 +40,21 @@ The experience should feel like browsing a luxury fashion magazine instead of sh
 
 Everything should feel:
 
- Elegant
+Elegant
 
- Timeless
+Timeless
 
- Sophisticated
+Sophisticated
 
- Premium
+Premium
 
- Calm
+Calm
 
- Editorial
+Editorial
 
- Minimal
+Minimal
 
- Luxurious
+Luxurious
 
 No clutter.
 
@@ -114,21 +114,21 @@ TYPOGRAPHY
 
 Luxury serif headings inspired by:
 
- Canela
+Canela
 
- PP Editorial
+PP Editorial
 
- Ivy Presto
+Ivy Presto
 
- Cormorant
+Cormorant
 
 Modern sans-serif body:
 
- SF Pro
+SF Pro
 
- Inter
+Inter
 
- Suisse
+Suisse
 
 Large typography.
 
@@ -256,61 +256,61 @@ Overall Feel
 
 Think:
 
- Apple.com
+Apple.com
 
- Linear.app
+Linear.app
 
- Framer
+Framer
 
- Aesop
+Aesop
 
- Net-a-Porter
+Net-a-Porter
 
- COS
+COS
 
 The motion should communicate quality and craftsmanship.
 
 Page Transitions
 
- Smooth fade between pages
+Smooth fade between pages
 
- Gentle slide transitions
+Gentle slide transitions
 
- Soft content reveal
+Soft content reveal
 
- No abrupt changes
+No abrupt changes
 
- Preserve scroll position intelligently
+Preserve scroll position intelligently
 
 Hero Section
 
- Slow cinematic image reveal
+Slow cinematic image reveal
 
- Soft fade-in for headline
+Soft fade-in for headline
 
- Sequential text appearance
+Sequential text appearance
 
- CTA buttons fade and slide up
+CTA buttons fade and slide up
 
- Background image subtly zooms (Ken Burns effect)
+Background image subtly zooms (Ken Burns effect)
 
- Gentle parallax while scrolling
+Gentle parallax while scrolling
 
 Scroll Animations
 
 As users scroll:
 
- Sections softly fade into view
+Sections softly fade into view
 
- Images reveal with masks
+Images reveal with masks
 
- Text slides upward slightly
+Text slides upward slightly
 
- Editorial blocks alternate reveal directions
+Editorial blocks alternate reveal directions
 
- Product grids cascade naturally
+Product grids cascade naturally
 
- Cards appear with staggered timing
+Cards appear with staggered timing
 
 No exaggerated animations.
 
@@ -570,37 +570,37 @@ Public
 
 Home (3 Concepts)
 
- Editorial Luxury
+Editorial Luxury
 
- Apple Minimal
+Apple Minimal
 
- Vogue Magazine
+Vogue Magazine
 
 Each includes:
 
- Hero
+Hero
 
- Featured Boutiques
+Featured Boutiques
 
- Categories
+Categories
 
- Trending Products
+Trending Products
 
- New Arrivals
+New Arrivals
 
- Designer Spotlight
+Designer Spotlight
 
- Editorial Stories
+Editorial Stories
 
- Featured Collections
+Featured Collections
 
- Boutique Highlights
+Boutique Highlights
 
- Campaign Banner
+Campaign Banner
 
- Newsletter
+Newsletter
 
- Premium Footer
+Premium Footer
 
 Search
 
@@ -910,21 +910,21 @@ MOBILE DESIGN
 
 Design responsive mobile versions for:
 
- Home
+Home
 
- Search
+Search
 
- Category
+Category
 
- Product
+Product
 
- Wishlist
+Wishlist
 
- Cart
+Cart
 
- Checkout
+Checkout
 
- Dashboard
+Dashboard
 
 Create mobile layouts specifically for touch interactions rather than shrinking desktop screens.
 
@@ -932,27 +932,27 @@ UX IMPROVEMENTS
 
 Improve:
 
- Navigation
+Navigation
 
- Product discovery
+Product discovery
 
- Boutique discovery
+Boutique discovery
 
- Designer discovery
+Designer discovery
 
- Search experience
+Search experience
 
- Filtering
+Filtering
 
- Checkout
+Checkout
 
- Information hierarchy
+Information hierarchy
 
- Readability
+Readability
 
- Accessibility
+Accessibility
 
- Visual consistency
+Visual consistency
 
 Reduce cognitive load while increasing the feeling of exclusivity and craftsmanship.
 
@@ -966,19 +966,19 @@ REFERENCE USAGE
 
 Use the attached reference images only to understand:
 
- Editorial composition
+Editorial composition
 
- Typography hierarchy
+Typography hierarchy
 
- Photography scale
+Photography scale
 
- White space
+White space
 
- Luxury mood
+Luxury mood
 
- Premium navigation
+Premium navigation
 
- Fashion presentation
+Fashion presentation
 
 Do not copy the layouts, branding, spacing, or visual structure. Create an original luxury marketplace with its own distinctive identity while maintaining the same level of sophistication and premium experience.
 
@@ -1002,6 +1002,7 @@ cd <repository-name>
 npm i
 npm run dev
 ```
+
 # Cloudinary and catalog seeding
 
 Production images are delivered by Cloudinary. Copy `.env.example` to `.env` and configure the

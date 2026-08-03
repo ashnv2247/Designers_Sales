@@ -125,8 +125,7 @@ function AdminInventory() {
     error,
   } = useQuery({
     queryKey: ["admin-inventory", search, lowStock, merchantId],
-    queryFn: () =>
-      list({ data: { search, lowStock, ...(merchantId ? { merchantId } : {}) } }),
+    queryFn: () => list({ data: { search, lowStock, ...(merchantId ? { merchantId } : {}) } }),
   });
 
   const { data: refs } = useQuery({

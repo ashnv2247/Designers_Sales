@@ -43,8 +43,7 @@ export function ProductCard({ product }: { product: Product }) {
     user && product.id && wishlistItems.some((item: any) => item.product?.id === product.id),
   );
   const wishlistMutation = useMutation({
-    mutationFn: () =>
-      toggleWishlistFn({ data: { productIdOrSlug: String(product.id) } }),
+    mutationFn: () => toggleWishlistFn({ data: { productIdOrSlug: String(product.id) } }),
     onSuccess: (result) => {
       toast.success(result.message);
       queryClient.invalidateQueries({ queryKey: ["user-wishlist"] });

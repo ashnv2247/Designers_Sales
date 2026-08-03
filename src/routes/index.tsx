@@ -12,10 +12,19 @@ import {
   catalogQuery,
   homepageQuery,
   publicCuratedPagesQuery,
+  activeCampaignQuery,
+  brandsQuery,
 } from "@/lib/catalog-queries";
 import { ArrowRight, SearchIcon } from "@/components/Icons";
 import { getCloudinaryImageUrl } from "@/lib/cloudinary-images";
 import { HomeSkeleton, ImageWithSkeleton } from "@/components/Skeleton";
+
+// New Section Imports
+import { CuratedSection } from "@/components/home/curated/CuratedSection";
+import { CategorySection } from "@/components/home/categories/CategorySection";
+import { SaleSection } from "@/components/home/sale/SaleSection";
+import { StyleSection } from "@/components/home/styles/StyleSection";
+import { BrandSection } from "@/components/home/brands/BrandSection";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -41,6 +50,8 @@ export const Route = createFileRoute("/")({
       context.queryClient.ensureQueryData(catalogQuery),
       context.queryClient.ensureQueryData(homepageQuery),
       context.queryClient.ensureQueryData(publicCuratedPagesQuery),
+      context.queryClient.ensureQueryData(activeCampaignQuery),
+      context.queryClient.ensureQueryData(brandsQuery),
     ]);
   },
   pendingComponent: HomeSkeleton,
@@ -81,6 +92,8 @@ function Home() {
   const { data: catalogItems } = useSuspenseQuery(catalogQuery);
   const { data: homepage } = useSuspenseQuery(homepageQuery);
   const { data: curatedPages } = useSuspenseQuery(publicCuratedPagesQuery);
+  const { data: activeCampaign } = useSuspenseQuery(activeCampaignQuery);
+  const { data: brands } = useSuspenseQuery(brandsQuery);
   const SLIDES = homepage.slides;
   const CATEGORIES = homepage.categories;
   const DESIGNERS = homepage.designers;
@@ -350,392 +363,29 @@ function Home() {
           </div>
         </section>
 
-        {/* ── 5. Just Reduced Section ─────────────────────────── */}
-        <section className="mx-auto max-w-[1600px] px-5 py-20 md:px-10 border-b border-border/30">
-          <Reveal className="flex flex-wrap items-end justify-between gap-6 mb-12">
-            <div>
-              <span className="text-[0.6rem] font-bold uppercase tracking-[0.3em] text-burgundy">
-                01 — Price Drops
-              </span>
-              <h2 className="display mt-4 text-[clamp(2.4rem,4.5vw,4.2rem)] leading-[0.95]">
-                Just <span className="italic text-burgundy">Reduced</span>
-              </h2>
-            </div>
-            <Link
-              to="/shop/$category"
-              params={{ category: "dresses" }}
-              className="link-underline text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground hover:text-foreground"
-            >
-              View all reductions
-            </Link>
-          </Reveal>
+        {/* ── Section 1: Curated Collections ────────────────── */}
+        <CuratedSection
+          curatedPages={curatedPages}
+          fallbackImage1={SLIDES[0]?.image}
+          fallbackImage2={SLIDES[1]?.image}
+          fallbackImage3={SLIDES[2]?.image}
+        />
 
-          <div className="grid gap-x-6 gap-y-12 sm:grid-cols-2 lg:grid-cols-4">
-            {catalogItems
-              .filter((item) => item.reduction > 0)
-              .sort((a, b) => b.reduction - a.reduction)
-              .slice(0, 4)
-              .map((p, i) => (
-                <Reveal key={p.id} delay={i * 100}>
-                  <Link to="/product/$id" params={{ id: p.id }} className="h-full block">
-                    <ProductCard product={p} />
-                  </Link>
-                </Reveal>
-              ))}
-          </div>
-        </section>
+        {/* ── Section 2: Shop by Category ──────────────────── */}
+        <CategorySection categories={CATEGORIES} catalogItems={catalogItems} />
 
-        {/* ── 6. Category Selection chips ──────────────────────── */}
-        <section className="bg-cream/40 py-12 border-b border-border/20">
-          <div className="mx-auto max-w-[1600px] px-5 md:px-10">
-            <p className="text-center text-[0.6rem] font-bold uppercase tracking-[0.3em] text-muted-foreground mb-6">
-              Shop by Category
-            </p>
-            <div className="flex flex-wrap justify-center gap-4">
-              {CATEGORIES.map((c) => (
-                <Link
-                  key={c.slug}
-                  to="/shop/$category"
-                  params={{ category: c.slug }}
-                  className="group bg-background hover:bg-black hover:text-ivory px-8 py-5 border border-border shadow-sm transition-all duration-300 font-serif text-lg text-ink flex items-center gap-3 cursor-pointer"
-                >
-                  <span>{c.name}</span>
-                  <span className="text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground group-hover:text-gold transition-colors">
-                    ({catalogItems.filter((i) => i.category === c.slug).length})
-                  </span>
-                </Link>
-              ))}
-            </div>
-          </div>
-        </section>
+        {/* ── Section 3: Sale Section ──────────────────────── */}
+        <SaleSection activeCampaign={activeCampaign} catalogItems={catalogItems} />
 
-        {/* ── 7. Trending Deals ───────────────────────────────── */}
-        <section className="mx-auto max-w-[1600px] px-5 py-20 md:px-10 border-b border-border/30">
-          <Reveal className="flex flex-wrap items-end justify-between gap-6 mb-12">
-            <div>
-              <span className="text-[0.6rem] font-bold uppercase tracking-[0.3em] text-gold font-semibold">
-                02 — Selling Out
-              </span>
-              <h2 className="display mt-4 text-[clamp(2.4rem,4.5vw,4.2rem)] leading-[0.95]">
-                Trending <span className="italic text-gold">Deals</span>
-              </h2>
-            </div>
-            <Link
-              to="/shop/$category"
-              params={{ category: "bags" }}
-              className="link-underline text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground hover:text-foreground"
-            >
-              Shop Hot Pieces
-            </Link>
-          </Reveal>
+        {/* ── Section 4: Shop by Style ─────────────────────── */}
+        <StyleSection slides={SLIDES} />
 
-          <div className="grid gap-x-6 gap-y-12 sm:grid-cols-2 lg:grid-cols-4">
-            {catalogItems
-              .filter((item) => item.stock <= 3 && item.reduction > 0)
-              .slice(0, 4)
-              .map((p, i) => (
-                <Reveal key={p.id} delay={i * 100}>
-                  <Link to="/product/$id" params={{ id: p.id }} className="h-full block">
-                    <ProductCard product={p} />
-                  </Link>
-                </Reveal>
-              ))}
-          </div>
-        </section>
-
-        {/* ── 8. Luxury Under $300 ────────────────────────────── */}
-        <section className="mx-auto max-w-[1600px] px-5 py-20 md:px-10 border-b border-border/30 bg-soft-grey/10">
-          <Reveal className="flex flex-wrap items-end justify-between gap-6 mb-12">
-            <div>
-              <span className="text-[0.6rem] font-bold uppercase tracking-[0.3em] text-forest">
-                03 — Accessible Luxury
-              </span>
-              <h2 className="display mt-4 text-[clamp(2.4rem,4.5vw,4.2rem)] leading-[0.95]">
-                Luxury Under <span className="italic text-forest">$300</span>
-              </h2>
-            </div>
-            <Link
-              to="/shop/$category"
-              params={{ category: "jewellery" }}
-              className="link-underline text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground hover:text-foreground"
-            >
-              Browse all budget luxury
-            </Link>
-          </Reveal>
-
-          <div className="grid gap-x-6 gap-y-12 sm:grid-cols-2 lg:grid-cols-4">
-            {catalogItems
-              .filter((item) => item.priceValue <= 300)
-              .slice(0, 4)
-              .map((p, i) => (
-                <Reveal key={p.id} delay={i * 100}>
-                  <Link to="/product/$id" params={{ id: p.id }} className="h-full block">
-                    <ProductCard product={p} />
-                  </Link>
-                </Reveal>
-              ))}
-          </div>
-        </section>
-
-        {/* ── Curated Editorial Edits ─────────────────────────── */}
-        <section className="mx-auto max-w-[1600px] px-5 py-24 md:px-10 border-b border-border/30 bg-cream/30">
-          <Reveal className="flex flex-wrap items-end justify-between gap-6 mb-12">
-            <div>
-              <span className="text-[0.6rem] font-bold uppercase tracking-[0.3em] text-gold font-semibold">
-                Curated Features
-              </span>
-              <h2 className="display mt-4 text-[clamp(2.4rem,4.5vw,4.2rem)] leading-[0.95]">
-                Editorial <span className="italic text-gold">Stories & Edits</span>
-              </h2>
-              <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground mt-2 max-w-lg">
-                Explore hand-picked luxury selections and seasonal stories curated by our buying
-                team
-              </p>
-            </div>
-            <Link
-              to="/shop/$category"
-              params={{ category: "dresses" }}
-              className="link-underline text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground hover:text-foreground"
-            >
-              Browse all edits
-            </Link>
-          </Reveal>
-
-          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-            {(curatedPages.length > 0
-              ? curatedPages
-              : [
-                  {
-                    id: "summer-edit",
-                    title: "Summer & Resort Edit",
-                    slug: "summer-edit",
-                    subtitle: "Lightweight silks, linen tailoring & resort silhouettes",
-                    hero_image_url: homepage.assets["boutique-editorial-1"] || SLIDES[0]?.image,
-                  },
-                  {
-                    id: "minimalist-wardrobe",
-                    title: "The Minimalist Wardrobe",
-                    slug: "minimalist-wardrobe",
-                    subtitle: "Capsule tailoring, neutral tones & quiet luxury essentials",
-                    hero_image_url: homepage.assets["boutique-editorial-2"] || SLIDES[1]?.image,
-                  },
-                ]
-            ).map((page: any, i: number) => (
-              <Reveal
-                key={page.id || page.slug}
-                delay={i * 120}
-                className="group relative overflow-hidden bg-stone border border-border/40 hover:border-gold/60 transition-all duration-500 flex flex-col justify-between shadow-sm"
-              >
-                <div className="aspect-[16/10] overflow-hidden bg-stone relative">
-                  <ImageWithSkeleton
-                    src={getCloudinaryImageUrl(page.hero_image_url || SLIDES[0]?.image, "banner")}
-                    alt={page.title}
-                    className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-103"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
-                  <div className="absolute bottom-4 left-5 right-5 text-ivory">
-                    <span className="text-[0.55rem] font-bold uppercase tracking-[0.24em] text-gold block mb-1">
-                      Curated Edit
-                    </span>
-                    <h3 className="display text-2xl leading-snug text-ivory font-semibold group-hover:text-gold transition-colors">
-                      {page.title}
-                    </h3>
-                  </div>
-                </div>
-                <div className="p-6 bg-card flex-1 flex flex-col justify-between">
-                  <p className="text-xs text-muted-foreground leading-relaxed font-serif line-clamp-2">
-                    {page.subtitle ||
-                      page.description ||
-                      "Discover hand-picked archive pieces and exclusive boutique clearance drops."}
-                  </p>
-                  <div className="mt-6 pt-4 border-t border-border/40 flex items-center justify-between">
-                    <Link
-                      to="/curated/$slug"
-                      params={{ slug: page.slug }}
-                      className="inline-flex items-center gap-2 text-[0.62rem] font-bold uppercase tracking-[0.24em] text-foreground group-hover:text-gold transition-colors"
-                    >
-                      Explore Story <ArrowRight />
-                    </Link>
-                  </div>
-                </div>
-              </Reveal>
-            ))}
-          </div>
-        </section>
-
-        {/* ── 9. Designer Spotlight Carousel ──────────────────── */}
-        <section
-          id="designers"
-          className="bg-black py-16 border-b border-border/10 overflow-hidden relative"
-        >
-          <div className="mx-auto max-w-[1600px] px-5 md:px-10">
-            <p className="text-center text-[0.6rem] font-bold uppercase tracking-[0.3em] text-champagne/80 mb-10">
-              04 — Shop Leading Designers
-            </p>
-            {/* Auto Scrolling Typographic Marquee */}
-            <div className="flex gap-16 animate-[marquee_25s_linear_infinite] whitespace-nowrap py-4">
-              {[
-                "Zimmermann",
-                "Camilla",
-                "Aje",
-                "Rebecca Vallance",
-                "Scanlan Theodore",
-                "Manning Cartell",
-                "Bianca Spender",
-                "Bassike",
-                "Christopher Esber",
-                "Camilla and Marc",
-              ].map((name) => (
-                <Link
-                  key={name}
-                  to="/shop/$category"
-                  params={{ category: "dresses" }}
-                  search={{ designer: name } as any}
-                  className="font-serif text-[clamp(2rem,5vw,4rem)] text-ivory/50 hover:text-gold transition-colors duration-300 font-light tracking-wide inline-block"
-                >
-                  {name}
-                </Link>
-              ))}
-              {/* Duplicate list to handle infinite scroll loop */}
-              {[
-                "Zimmermann",
-                "Camilla",
-                "Aje",
-                "Rebecca Vallance",
-                "Scanlan Theodore",
-                "Manning Cartell",
-                "Bianca Spender",
-                "Bassike",
-                "Christopher Esber",
-                "Camilla and Marc",
-              ].map((name) => (
-                <Link
-                  key={name + "-dup"}
-                  to="/shop/$category"
-                  params={{ category: "dresses" }}
-                  search={{ designer: name } as any}
-                  className="font-serif text-[clamp(2rem,5vw,4rem)] text-ivory/50 hover:text-gold transition-colors duration-300 font-light tracking-wide inline-block"
-                >
-                  {name}
-                </Link>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* ── 10. Boutique Collection (Simplified) ────────────── */}
-        <section
-          id="boutiques"
-          className="mx-auto max-w-[1600px] px-5 py-20 md:px-10 border-b border-border/30"
-        >
-          <Reveal className="mb-12">
-            <span className="text-[0.6rem] font-bold uppercase tracking-[0.3em] text-muted-foreground">
-              05 — Partner Network
-            </span>
-            <h2 className="display mt-4 max-w-3xl text-[clamp(2.4rem,4.5vw,4.2rem)] leading-[0.95]">
-              Australian Boutique <span className="italic">Ateliers</span>
-            </h2>
-          </Reveal>
-
-          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
-            {[
-              {
-                name: "Maison Verre",
-                city: "Sydney",
-                image: boutique1,
-                products: 24,
-                discount: 45,
-              },
-              {
-                name: "Atelier Nord",
-                city: "Melbourne",
-                image: boutique2,
-                products: 18,
-                discount: 40,
-              },
-              {
-                name: "Saltbush Studio",
-                city: "Hobart",
-                image: SLIDES[2]?.image || SLIDES[0]?.image,
-                products: 12,
-                discount: 35,
-              },
-              {
-                name: "Margot House",
-                city: "Perth",
-                image: SLIDES[1]?.image || SLIDES[0]?.image,
-                products: 15,
-                discount: 50,
-              },
-            ].map((boutique, i) => (
-              <Reveal
-                key={boutique.name}
-                delay={i * 100}
-                className="bg-cream/30 border border-border/40 p-5 flex flex-col justify-between hover:border-gold/50 transition-colors duration-300"
-              >
-                <div>
-                  <div className="aspect-[4/3] bg-stone overflow-hidden mb-5">
-                    <img
-                      src={getCloudinaryImageUrl(boutique.image, "card")}
-                      alt={boutique.name}
-                      className="h-full w-full object-cover transition-transform duration-700 hover:scale-102"
-                    />
-                  </div>
-                  <p className="text-[0.55rem] font-bold tracking-wider text-muted-foreground uppercase">
-                    {boutique.city}
-                  </p>
-                  <h3 className="font-serif text-2xl mt-1 text-ink">{boutique.name}</h3>
-                  <div className="mt-4 flex justify-between text-xs text-muted-foreground border-y border-border/30 py-3">
-                    <span>{boutique.products} Products</span>
-                    <span className="font-semibold text-burgundy">
-                      Average {boutique.discount}% Off
-                    </span>
-                  </div>
-                </div>
-                <Link
-                  to="/merchants"
-                  className="mt-6 w-full text-center bg-black py-3 text-[0.62rem] font-semibold uppercase tracking-[0.2em] text-ivory hover:bg-gold hover:text-ink transition-colors duration-300"
-                >
-                  Shop Boutique
-                </Link>
-              </Reveal>
-            ))}
-          </div>
-        </section>
-
-        {/* ── 11. Best Sellers ────────────────────────────────── */}
-        <section className="mx-auto max-w-[1600px] px-5 py-20 md:px-10 border-b border-border/30">
-          <Reveal className="flex flex-wrap items-end justify-between gap-6 mb-12">
-            <div>
-              <span className="text-[0.6rem] font-bold uppercase tracking-[0.3em] text-burgundy">
-                06 — High Conversion
-              </span>
-              <h2 className="display mt-4 text-[clamp(2.4rem,4.5vw,4.2rem)] leading-[0.95]">
-                Best <span className="italic text-burgundy">Sellers</span>
-              </h2>
-            </div>
-            <Link
-              to="/shop/$category"
-              params={{ category: "dresses" }}
-              className="link-underline text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground hover:text-foreground"
-            >
-              Shop Top Sellers
-            </Link>
-          </Reveal>
-
-          <div className="grid gap-x-6 gap-y-12 sm:grid-cols-2 lg:grid-cols-4">
-            {catalogItems
-              .filter((item) => item.addedDaysAgo < 30)
-              .slice(0, 4)
-              .map((p, i) => (
-                <Reveal key={p.id} delay={i * 100}>
-                  <Link to="/product/$id" params={{ id: p.id }} className="h-full block">
-                    <ProductCard product={p} />
-                  </Link>
-                </Reveal>
-              ))}
-          </div>
-        </section>
+        {/* ── Section 5: Shop by Brand ─────────────────────── */}
+        <BrandSection
+          brands={brands}
+          catalogItems={catalogItems}
+          fallbackImage={SLIDES[3]?.image}
+        />
 
         {/* ── 12. Trust Section ───────────────────────────────── */}
         <section className="bg-cream py-20 border-b border-border/40">

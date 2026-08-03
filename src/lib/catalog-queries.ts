@@ -7,6 +7,8 @@ import {
   getMerchantDirectory,
   getSiteAsset,
   listPublicCuratedPages,
+  getActiveCampaign,
+  getBrandsList,
   type DbCatalogItem,
 } from "@/lib/catalog.functions";
 
@@ -37,6 +39,16 @@ export const siteAssetQuery = (key: string) =>
 export const publicCuratedPagesQuery = queryOptions({
   queryKey: ["public-curated-pages"],
   queryFn: () => listPublicCuratedPages(),
+});
+
+export const activeCampaignQuery = queryOptions({
+  queryKey: ["active-campaign"],
+  queryFn: () => getActiveCampaign(),
+});
+
+export const brandsQuery = queryOptions({
+  queryKey: ["brands-list"],
+  queryFn: () => getBrandsList(),
 });
 
 export const byCategory = (items: DbCatalogItem[], slug: string) =>

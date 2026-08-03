@@ -564,13 +564,27 @@ for (const post of posts) {
   );
 }
 
-await one("contact_inquiries", {
-  name: "Amelia Hart", email: "amelia.seed@example.com", subject: "Authentication question",
-  message: "Could you explain the authentication process for archive pieces?", status: "unread",
-}, "email,subject", "contact inquiry");
-await one("newsletter_subscribers", {
-  email: "newsletter.seed@example.com", status: "subscribed",
-}, "email", "newsletter subscriber");
+await one(
+  "contact_inquiries",
+  {
+    name: "Amelia Hart",
+    email: "amelia.seed@example.com",
+    subject: "Authentication question",
+    message: "Could you explain the authentication process for archive pieces?",
+    status: "unread",
+  },
+  "email,subject",
+  "contact inquiry",
+);
+await one(
+  "newsletter_subscribers",
+  {
+    email: "newsletter.seed@example.com",
+    status: "subscribed",
+  },
+  "email",
+  "newsletter subscriber",
+);
 
 if (!process.env.SEED_TEST_USER_ID) {
   console.log("Skipping carts, wishlists, and orders: SEED_TEST_USER_ID is not configured");

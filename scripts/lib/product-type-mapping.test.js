@@ -12,9 +12,17 @@ describe("resolveProductType", () => {
     expect(resolveProductType({ category_id: "bags" }, types).type.id).toBe("bag");
   });
   it("matches a unique type name without crossing categories", () => {
-    expect(resolveProductType({ category_id: "clothing", name: "Black Designer Dresses", tags: [] }, types).type.id).toBe("dress");
+    expect(
+      resolveProductType(
+        { category_id: "clothing", name: "Black Designer Dresses", tags: [] },
+        types,
+      ).type.id,
+    ).toBe("dress");
   });
   it("does not guess between multiple candidates", () => {
-    expect(resolveProductType({ category_id: "clothing", name: "Archive piece", tags: [] }, types).status).toBe("unmapped");
+    expect(
+      resolveProductType({ category_id: "clothing", name: "Archive piece", tags: [] }, types)
+        .status,
+    ).toBe("unmapped");
   });
 });
