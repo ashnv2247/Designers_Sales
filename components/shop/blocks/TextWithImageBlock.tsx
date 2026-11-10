@@ -48,69 +48,25 @@ export const TextWithImageBlock: React.FC<TextWithImageBlockProps> = ({
     });
   };
 
-  if (isEditMode) {
-    return (
-      <div className="space-y-4">
-        {/* Heading Field */}
-        <div>
-          <label className="block text-[10px] uppercase tracking-wider text-stone-500 mb-1">
-            Section Kicker / Heading
-          </label>
-          <input
-            type="text"
-            value={block.heading || ""}
-            onChange={(e) => onChange({ ...block, heading: e.target.value })}
-            placeholder="e.g. WHAT WE LOVE"
-            className="w-full px-3 py-1.5 bg-stone-50 border border-stone-200 rounded text-xs font-medium uppercase tracking-wider focus:outline-none focus:border-stone-400"
-          />
-        </div>
-
-        {/* Body Text Field */}
-        <div>
-          <label className="block text-[10px] uppercase tracking-wider text-stone-500 mb-1">
-            Long-form Editorial Prose
-          </label>
-          <textarea
-            rows={5}
-            value={block.bodyText || ""}
-            onChange={(e) => onChange({ ...block, bodyText: e.target.value })}
-            placeholder="Enter editorial prose for this section..."
-            className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded text-xs font-serif leading-relaxed focus:outline-none focus:border-stone-400 resize-y"
-          />
-        </div>
-
-        {/* Optional Image Editor */}
-        <div className="pt-2">
-          {image ? (
-            <MediaAssetEditor
-              label="Accompanying Visual"
-              asset={image}
-              onChange={handleImageChange}
-              onRemove={handleImageRemove}
-              allowedRatios={["4:5", "1:1", "16:10"]}
-            />
-          ) : (
-            <button
-              type="button"
-              onClick={handleAddImage}
-              className="inline-flex items-center gap-1.5 px-3 py-2 border border-dashed border-stone-300 hover:border-stone-500 rounded text-stone-600 hover:text-stone-900 text-xs transition-colors"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Add Visual to this Text Block</span>
-            </button>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  // Public Render Mode
   return (
     <article className="space-y-6">
-      {block.heading && (
-        <h2 className="font-editorial-sans text-xs md:text-sm font-semibold uppercase tracking-[0.25em] text-stone-600 pb-1 border-b border-stone-200/60 inline-block">
-          {block.heading}
-        </h2>
+      {/* Heading / Kicker */}
+      {(block.heading || isEditMode) && (
+        <div className="pb-1 border-b border-stone-200/60 inline-block w-full max-w-md">
+          {isEditMode ? (
+            <input
+              type="text"
+              value={block.heading || ""}
+              onChange={(e) => onChange({ ...block, heading: e.target.value })}
+              placeholder="SECTION KICKER / HEADING"
+              className="font-editorial-sans text-xs md:text-sm font-semibold uppercase tracking-[0.25em] text-stone-600 bg-transparent border-none p-0 focus:outline-none w-full placeholder:text-stone-300"
+            />
+          ) : (
+            <h2 className="font-editorial-sans text-xs md:text-sm font-semibold uppercase tracking-[0.25em] text-stone-600">
+              {block.heading}
+            </h2>
+          )}
+        </div>
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
@@ -119,15 +75,25 @@ export const TextWithImageBlock: React.FC<TextWithImageBlockProps> = ({
             image ? "md:col-span-7" : "md:col-span-12"
           } space-y-4`}
         >
-          {block.bodyText && (
-            <div className="font-serif text-base md:text-[17px] leading-[1.85] text-stone-700 whitespace-pre-line text-justify selection:bg-stone-200">
-              {block.bodyText}
-            </div>
+          {isEditMode ? (
+            <textarea
+              rows={Math.max(4, (block.bodyText || "").split("\n").length + 2)}
+              value={block.bodyText || ""}
+              onChange={(e) => onChange({ ...block, bodyText: e.target.value })}
+              placeholder="Enter long-form editorial prose..."
+              className="w-full font-serif text-base md:text-[17px] leading-[1.85] text-stone-700 bg-transparent border border-dashed border-stone-200 hover:border-stone-400 focus:border-stone-600 focus:bg-white/50 rounded p-2 focus:outline-none resize-y transition-colors"
+            />
+          ) : (
+            block.bodyText && (
+              <div className="font-serif text-base md:text-[17px] leading-[1.85] text-stone-700 whitespace-pre-line text-justify selection:bg-stone-200">
+                {block.bodyText}
+              </div>
+            )
           )}
         </div>
 
-        {image && (
-          <div className="md:col-span-5">
+        {image ? (
+          <div className="md:col-span-5 relative group/img">
             <EditorialImage
               src={image.url}
               alt={image.alt}
@@ -135,8 +101,44 @@ export const TextWithImageBlock: React.FC<TextWithImageBlockProps> = ({
               caption={image.caption}
               photographerCredit={image.photographerCredit}
             />
+            {isEditMode && (
+              <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover/img:opacity-100 transition-opacity">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const newUrl = prompt("Enter new image URL or Cloudinary path:", image.url);
+                    if (newUrl && newUrl.trim()) {
+                      handleImageChange({ ...image, url: newUrl.trim() });
+                    }
+                  }}
+                  className="px-2 py-1 bg-white/95 hover:bg-white text-stone-800 text-[10px] font-editorial-sans uppercase tracking-wider rounded shadow-xs border border-stone-300 flex items-center gap-1"
+                >
+                  <span>Replace Photo</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleImageChange({ ...image, url: "https://invalid-image-url-404.jpg" })}
+                  className="px-1.5 py-1 bg-white/80 hover:bg-white text-stone-500 text-[9px] font-mono rounded border border-stone-200"
+                >
+                  Load Broken URL
+                </button>
+              </div>
+            )}
           </div>
-        )}
+        ) : isEditMode ? (
+          <div className="md:col-span-5">
+            <button
+              type="button"
+              onClick={handleAddImage}
+              className="w-full aspect-[4/5] border border-dashed border-stone-300 hover:border-stone-500 rounded bg-stone-50/50 flex flex-col items-center justify-center gap-2 text-stone-500 hover:text-stone-800 transition-colors"
+            >
+              <Plus className="w-5 h-5 text-stone-400" />
+              <span className="text-xs font-editorial-sans uppercase tracking-wider">
+                Add Accompanying Visual
+              </span>
+            </button>
+          </div>
+        ) : null}
       </div>
     </article>
   );

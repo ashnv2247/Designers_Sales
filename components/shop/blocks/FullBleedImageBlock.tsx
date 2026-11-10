@@ -30,30 +30,8 @@ export const FullBleedImageBlock: React.FC<FullBleedImageBlockProps> = ({
     });
   };
 
-  if (isEditMode) {
-    return (
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <span className="font-editorial-sans text-[10px] uppercase tracking-[0.2em] font-semibold text-stone-500">
-            Full-Bleed Showcase Image
-          </span>
-          <span className="text-[10px] text-stone-400">
-            Spans full width of the editorial column
-          </span>
-        </div>
-
-        <MediaAssetEditor
-          label="Showcase Visual"
-          asset={image}
-          onChange={handleImageChange}
-          allowedRatios={["16:10", "4:5", "1:1", "auto"]}
-        />
-      </div>
-    );
-  }
-
   return (
-    <div className="w-full my-3">
+    <div className="w-full my-3 relative group/bleed">
       <EditorialImage
         src={image.url}
         alt={image.alt}
@@ -61,6 +39,22 @@ export const FullBleedImageBlock: React.FC<FullBleedImageBlockProps> = ({
         caption={image.caption}
         photographerCredit={image.photographerCredit}
       />
+      {isEditMode && (
+        <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover/bleed:opacity-100 transition-opacity">
+          <button
+            type="button"
+            onClick={() => {
+              const newUrl = prompt("Enter new full-bleed image URL or Cloudinary path:", image.url);
+              if (newUrl && newUrl.trim()) {
+                handleImageChange({ ...image, url: newUrl.trim() });
+              }
+            }}
+            className="px-2.5 py-1 bg-white/95 hover:bg-white text-stone-800 text-[10px] font-editorial-sans uppercase tracking-wider rounded shadow-xs border border-stone-300"
+          >
+            Replace Photo
+          </button>
+        </div>
+      )}
     </div>
   );
 };

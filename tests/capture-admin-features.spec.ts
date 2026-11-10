@@ -4,7 +4,7 @@ test("Capture DesignerSale Live In-Place Studio", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
 
   // 1. Visit Live In-Place Studio (Shop Profile)
-  await page.goto("http://localhost:3000/admin");
+  await page.goto("/admin");
   await page.waitForSelector("text=LIVE STUDIO");
   await page.waitForTimeout(1000);
 

@@ -20,17 +20,10 @@ export const PullQuoteBlock: React.FC<PullQuoteBlockProps> = ({
     role: "Proprietor & Creative Director",
   };
 
-  if (isEditMode) {
-    return (
-      <div className="space-y-3 p-4 bg-white border border-stone-200 rounded-sm">
-        <span className="font-editorial-sans text-[10px] uppercase tracking-[0.2em] font-semibold text-stone-500">
-          Editorial Pull Quote
-        </span>
-
-        <div>
-          <label className="block text-[10px] uppercase tracking-wider text-stone-500 mb-1">
-            Quote Text
-          </label>
+  return (
+    <div className="my-8 py-8 border-t border-b border-stone-200/80 text-center select-none">
+      <blockquote className="max-w-2xl mx-auto px-4">
+        {isEditMode ? (
           <textarea
             rows={3}
             value={quote.text}
@@ -40,63 +33,52 @@ export const PullQuoteBlock: React.FC<PullQuoteBlockProps> = ({
                 quote: { ...quote, text: e.target.value },
               })
             }
-            className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded text-xs italic font-serif leading-relaxed focus:outline-none focus:border-stone-400"
             placeholder="Enter memorable quote or excerpt..."
+            className="w-full font-serif text-xl sm:text-2xl md:text-[26px] italic font-normal leading-relaxed text-stone-800 bg-transparent border border-dashed border-stone-200 hover:border-stone-400 focus:border-stone-600 focus:bg-white/40 focus:outline-none rounded p-2 text-center resize-none transition-colors"
           />
-        </div>
+        ) : (
+          <p className="font-serif text-xl sm:text-2xl md:text-[26px] italic font-normal leading-relaxed text-stone-800">
+            “{quote.text}”
+          </p>
+        )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <label className="block text-[10px] uppercase tracking-wider text-stone-500 mb-1">
-              Author
-            </label>
-            <input
-              type="text"
-              value={quote.author}
-              onChange={(e) =>
-                onChange({
-                  ...block,
-                  quote: { ...quote, author: e.target.value },
-                })
-              }
-              placeholder="e.g. Elena Rostova"
-              className="w-full px-2.5 py-1.5 bg-stone-50 border border-stone-200 rounded text-xs focus:outline-none focus:border-stone-400"
-            />
-          </div>
-          <div>
-            <label className="block text-[10px] uppercase tracking-wider text-stone-500 mb-1">
-              Role / Subtitle
-            </label>
-            <input
-              type="text"
-              value={quote.role || ""}
-              onChange={(e) =>
-                onChange({
-                  ...block,
-                  quote: { ...quote, role: e.target.value },
-                })
-              }
-              placeholder="e.g. Founder & Creative Director"
-              className="w-full px-2.5 py-1.5 bg-stone-50 border border-stone-200 rounded text-xs focus:outline-none focus:border-stone-400"
-            />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Public Render Mode
-  return (
-    <div className="my-8 py-8 border-t border-b border-stone-200/80 text-center select-none">
-      <blockquote className="max-w-2xl mx-auto px-4">
-        <p className="font-serif text-xl sm:text-2xl md:text-[26px] italic font-normal leading-relaxed text-stone-800">
-          “{quote.text}”
-        </p>
-        {(quote.author || quote.role) && (
-          <footer className="mt-4 flex items-center justify-center gap-2 font-editorial-sans text-[9px] sm:text-[10px] uppercase tracking-[0.22em] text-stone-500">
-            {quote.author && <span className="font-semibold">{quote.author}</span>}
-            {quote.author && quote.role && <span className="text-stone-300">/</span>}
-            {quote.role && <span>{quote.role}</span>}
+        {(quote.author || quote.role || isEditMode) && (
+          <footer className="mt-4 flex flex-wrap items-center justify-center gap-2 font-editorial-sans text-[9px] sm:text-[10px] uppercase tracking-[0.22em] text-stone-500">
+            {isEditMode ? (
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={quote.author}
+                  onChange={(e) =>
+                    onChange({
+                      ...block,
+                      quote: { ...quote, author: e.target.value },
+                    })
+                  }
+                  placeholder="AUTHOR NAME"
+                  className="bg-transparent border-b border-dashed border-stone-300 focus:border-stone-700 text-center font-semibold text-stone-700 focus:outline-none px-1"
+                />
+                <span className="text-stone-300">/</span>
+                <input
+                  type="text"
+                  value={quote.role || ""}
+                  onChange={(e) =>
+                    onChange({
+                      ...block,
+                      quote: { ...quote, role: e.target.value },
+                    })
+                  }
+                  placeholder="ROLE / TITLE"
+                  className="bg-transparent border-b border-dashed border-stone-300 focus:border-stone-700 text-center text-stone-500 focus:outline-none px-1"
+                />
+              </div>
+            ) : (
+              <>
+                {quote.author && <span className="font-semibold">{quote.author}</span>}
+                {quote.author && quote.role && <span className="text-stone-300">/</span>}
+                {quote.role && <span>{quote.role}</span>}
+              </>
+            )}
           </footer>
         )}
       </blockquote>

@@ -641,15 +641,15 @@ export const LiveInPlaceStudio: React.FC<LiveInPlaceStudioProps> = ({
                 <div className="lg:col-span-8 w-full space-y-10">
                   {/* Floating In-Place Section Adder Bar */}
                   {isEditMode && (
-                    <div className="p-3 bg-stone-50 border border-stone-200 rounded flex flex-wrap items-center justify-between gap-2 text-xs">
-                      <span className="font-editorial-sans text-[9px] uppercase tracking-[0.2em] font-bold text-stone-600">
+                    <div className="py-2.5 px-3 border-y border-dashed border-stone-300/70 flex flex-wrap items-center justify-between gap-2 text-xs opacity-75 hover:opacity-100 transition-opacity">
+                      <span className="font-editorial-sans text-[8.5px] uppercase tracking-[0.2em] font-semibold text-stone-500">
                         + Insert New Section Into Page:
                       </span>
                       <div className="flex flex-wrap gap-1.5 text-[10px] font-editorial-sans uppercase tracking-wider">
                         <button
                           type="button"
                           onClick={() => handleAddShopBlock("image_duo")}
-                          className="px-2.5 py-1 bg-white hover:bg-stone-100 border border-stone-300 rounded flex items-center gap-1"
+                          className="px-2.5 py-1 bg-white hover:bg-stone-50 border border-stone-200 hover:border-stone-400 rounded text-stone-700 flex items-center gap-1 shadow-2xs transition-colors"
                         >
                           <Plus className="w-3 h-3" />
                           <span>Image Duo (2 Photos)</span>
@@ -657,7 +657,7 @@ export const LiveInPlaceStudio: React.FC<LiveInPlaceStudioProps> = ({
                         <button
                           type="button"
                           onClick={() => handleAddShopBlock("full_bleed_image")}
-                          className="px-2.5 py-1 bg-white hover:bg-stone-100 border border-stone-300 rounded flex items-center gap-1"
+                          className="px-2.5 py-1 bg-white hover:bg-stone-50 border border-stone-200 hover:border-stone-400 rounded text-stone-700 flex items-center gap-1 shadow-2xs transition-colors"
                         >
                           <Plus className="w-3 h-3" />
                           <span>Full Bleed Photo</span>
@@ -665,7 +665,7 @@ export const LiveInPlaceStudio: React.FC<LiveInPlaceStudioProps> = ({
                         <button
                           type="button"
                           onClick={() => handleAddShopBlock("text_with_image")}
-                          className="px-2.5 py-1 bg-white hover:bg-stone-100 border border-stone-300 rounded flex items-center gap-1"
+                          className="px-2.5 py-1 bg-white hover:bg-stone-50 border border-stone-200 hover:border-stone-400 rounded text-stone-700 flex items-center gap-1 shadow-2xs transition-colors"
                         >
                           <Plus className="w-3 h-3" />
                           <span>Text + Image</span>
@@ -673,7 +673,7 @@ export const LiveInPlaceStudio: React.FC<LiveInPlaceStudioProps> = ({
                         <button
                           type="button"
                           onClick={() => handleAddShopBlock("pull_quote")}
-                          className="px-2.5 py-1 bg-white hover:bg-stone-100 border border-stone-300 rounded flex items-center gap-1"
+                          className="px-2.5 py-1 bg-white hover:bg-stone-50 border border-stone-200 hover:border-stone-400 rounded text-stone-700 flex items-center gap-1 shadow-2xs transition-colors"
                         >
                           <Plus className="w-3 h-3" />
                           <span>Pull Quote</span>

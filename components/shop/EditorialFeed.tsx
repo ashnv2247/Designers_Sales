@@ -272,42 +272,42 @@ export const EditorialFeed: React.FC<EditorialFeedProps> = ({
 
   // Add block insertion toolbar
   const renderAddToolbar = (insertIndex?: number) => (
-    <div className="py-4 flex flex-wrap items-center justify-center gap-2 border-y border-dashed border-stone-200 bg-stone-50/50 my-6 rounded">
-      <span className="font-editorial-sans text-[9px] uppercase tracking-[0.2em] font-semibold text-stone-400 mr-2">
+    <div className="py-2.5 flex flex-wrap items-center justify-center gap-2 border-y border-dashed border-stone-200/80 my-6 opacity-60 hover:opacity-100 transition-opacity">
+      <span className="font-editorial-sans text-[8.5px] uppercase tracking-[0.2em] font-semibold text-stone-400 mr-1">
         + Insert Section:
       </span>
       <button
         type="button"
         onClick={() => handleAddBlock("text_with_image", insertIndex)}
-        className="px-2.5 py-1 text-[11px] bg-white border border-stone-200 hover:border-stone-400 text-stone-700 rounded transition-colors shadow-2xs"
+        className="px-2 py-0.5 text-[10px] font-editorial-sans uppercase tracking-wider bg-white border border-stone-200 hover:border-stone-400 text-stone-600 rounded transition-colors shadow-2xs"
       >
         Text + Visual
       </button>
       <button
         type="button"
         onClick={() => handleAddBlock("image_duo", insertIndex)}
-        className="px-2.5 py-1 text-[11px] bg-white border border-stone-200 hover:border-stone-400 text-stone-700 rounded transition-colors shadow-2xs"
+        className="px-2 py-0.5 text-[10px] font-editorial-sans uppercase tracking-wider bg-white border border-stone-200 hover:border-stone-400 text-stone-600 rounded transition-colors shadow-2xs"
       >
         Image Duo (2 Slots)
       </button>
       <button
         type="button"
         onClick={() => handleAddBlock("full_bleed_image", insertIndex)}
-        className="px-2.5 py-1 text-[11px] bg-white border border-stone-200 hover:border-stone-400 text-stone-700 rounded transition-colors shadow-2xs"
+        className="px-2 py-0.5 text-[10px] font-editorial-sans uppercase tracking-wider bg-white border border-stone-200 hover:border-stone-400 text-stone-600 rounded transition-colors shadow-2xs"
       >
         Full-Bleed Visual
       </button>
       <button
         type="button"
         onClick={() => handleAddBlock("pull_quote", insertIndex)}
-        className="px-2.5 py-1 text-[11px] bg-white border border-stone-200 hover:border-stone-400 text-stone-700 rounded transition-colors shadow-2xs"
+        className="px-2 py-0.5 text-[10px] font-editorial-sans uppercase tracking-wider bg-white border border-stone-200 hover:border-stone-400 text-stone-600 rounded transition-colors shadow-2xs"
       >
         Pull Quote
       </button>
       <button
         type="button"
         onClick={() => handleAddBlock("designer_roster", insertIndex)}
-        className="px-2.5 py-1 text-[11px] bg-white border border-stone-200 hover:border-stone-400 text-stone-700 rounded transition-colors shadow-2xs"
+        className="px-2 py-0.5 text-[10px] font-editorial-sans uppercase tracking-wider bg-white border border-stone-200 hover:border-stone-400 text-stone-600 rounded transition-colors shadow-2xs"
       >
         Designer Roster
       </button>
@@ -330,102 +330,76 @@ export const EditorialFeed: React.FC<EditorialFeedProps> = ({
       )}
 
       {blocks.map((block, index) => (
-        <div key={block.id} className="relative group">
-          {/* Edit Mode Header Toolbar for Block */}
+        <div key={block.id} className="relative group/block py-2">
+          {/* Subtle Hover Action Toolbar for Block */}
           {isEditMode && (
-            <div className="mb-3 p-2 bg-stone-100 border border-stone-300/80 rounded flex items-center justify-between text-xs text-stone-700">
-              <div className="flex items-center gap-2">
-                <span className="font-editorial-sans text-[9px] uppercase tracking-[0.2em] font-bold text-stone-800">
-                  Block {String(index + 1).padStart(2, "0")} /
-                </span>
-                <select
-                  value={block.type}
-                  onChange={(e) =>
-                    handleTypeChange(index, e.target.value as BlockType)
-                  }
-                  className="bg-white border border-stone-300 rounded px-2 py-0.5 text-[11px] font-sans font-medium text-stone-800 focus:outline-none focus:border-stone-500"
-                >
-                  <option value="text_with_image">Text with Visual</option>
-                  <option value="image_duo">Image Duo (2 Slots)</option>
-                  <option value="full_bleed_image">Full-Bleed Image</option>
-                  <option value="pull_quote">Pull Quote</option>
-                  <option value="designer_roster">Designer Roster</option>
-                </select>
-              </div>
-
-              {/* Action Controls: Move Up/Down, Duplicate, Delete */}
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  data-testid={`move-up-block-${index}`}
-                  disabled={index === 0}
-                  onClick={() => handleMoveUp(index)}
-                  className="p-1 hover:bg-stone-200 rounded disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
-                  title="Move block up"
-                >
-                  <ChevronUp className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  type="button"
-                  data-testid={`move-down-block-${index}`}
-                  disabled={index === blocks.length - 1}
-                  onClick={() => handleMoveDown(index)}
-                  className="p-1 hover:bg-stone-200 rounded disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
-                  title="Move block down"
-                >
-                  <ChevronDown className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleDuplicate(index)}
-                  className="p-1 hover:bg-stone-200 rounded transition-colors text-stone-600"
-                  title="Duplicate block"
-                >
-                  <Copy className="w-3.5 h-3.5" />
-                </button>
-
-                {confirmDeleteId === block.id ? (
-                  <div className="flex items-center gap-1 bg-red-50 border border-red-200 px-1 py-0.5 rounded text-[10px] text-red-700 ml-1">
-                    <span>Delete?</span>
-                    <button
-                      type="button"
-                      data-testid={`confirm-delete-${index}`}
-                      onClick={() => handleDelete(block.id)}
-                      className="p-0.5 hover:bg-red-100 rounded text-red-800"
-                    >
-                      <Check className="w-3 h-3" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setConfirmDeleteId(null)}
-                      className="p-0.5 hover:bg-red-100 rounded text-stone-500"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
-                ) : (
+            <div className="absolute -top-3 right-2 z-30 flex items-center gap-1 bg-white/95 backdrop-blur-xs border border-stone-200 rounded-full px-2 py-0.5 shadow-sm opacity-0 group-hover/block:opacity-100 transition-opacity text-[10px]">
+              <span className="font-mono text-[9px] text-stone-400 font-semibold mr-1">
+                #{String(index + 1).padStart(2, "0")}
+              </span>
+              <button
+                type="button"
+                data-testid={`move-up-block-${index}`}
+                disabled={index === 0}
+                onClick={() => handleMoveUp(index)}
+                className="p-1 hover:bg-stone-100 rounded-full disabled:opacity-30 transition-colors text-stone-600"
+                title="Move block up"
+              >
+                <ChevronUp className="w-3 h-3" />
+              </button>
+              <button
+                type="button"
+                data-testid={`move-down-block-${index}`}
+                disabled={index === blocks.length - 1}
+                onClick={() => handleMoveDown(index)}
+                className="p-1 hover:bg-stone-100 rounded-full disabled:opacity-30 transition-colors text-stone-600"
+                title="Move block down"
+              >
+                <ChevronDown className="w-3 h-3" />
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDuplicate(index)}
+                className="p-1 hover:bg-stone-100 rounded-full transition-colors text-stone-600"
+                title="Duplicate block"
+              >
+                <Copy className="w-3 h-3" />
+              </button>
+              {confirmDeleteId === block.id ? (
+                <div className="flex items-center gap-0.5 bg-red-50 px-1 py-0.5 rounded text-[9px] text-red-700">
+                  <span>Delete?</span>
                   <button
                     type="button"
-                    data-testid={`delete-block-${index}`}
-                    onClick={() => setConfirmDeleteId(block.id)}
-                    className="p-1 hover:bg-red-100 hover:text-red-700 rounded transition-colors text-stone-400"
-                    title="Delete block"
+                    data-testid={`confirm-delete-${index}`}
+                    onClick={() => handleDelete(block.id)}
+                    className="p-0.5 hover:bg-red-200 rounded text-red-800"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
+                    <Check className="w-2.5 h-2.5" />
                   </button>
-                )}
-              </div>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmDeleteId(null)}
+                    className="p-0.5 hover:bg-red-200 rounded text-stone-500"
+                  >
+                    <X className="w-2.5 h-2.5" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  data-testid={`delete-block-${index}`}
+                  onClick={() => setConfirmDeleteId(block.id)}
+                  className="p-1 hover:bg-red-50 hover:text-red-700 rounded-full transition-colors text-stone-400"
+                  title="Delete block"
+                >
+                  <Trash2 className="w-3 h-3" />
+                </button>
+              )}
             </div>
           )}
 
-          {/* Block Content Container */}
-          <div
-            className={
-              isEditMode
-                ? "p-4 bg-white border border-stone-200 rounded shadow-xs mb-4"
-                : ""
-            }
-          >
+          {/* Block Content Container: Clean & Transparent */}
+          <div className="relative">
             {renderBlockContent(block, index, isEditMode)}
           </div>
 

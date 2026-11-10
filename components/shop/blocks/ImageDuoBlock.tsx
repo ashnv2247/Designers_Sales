@@ -47,43 +47,13 @@ export const ImageDuoBlock: React.FC<ImageDuoBlockProps> = ({
     });
   };
 
-  if (isEditMode) {
-    return (
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <span className="font-editorial-sans text-[10px] uppercase tracking-[0.2em] font-semibold text-stone-500">
-            Image Duo (Strictly 2 Slots)
-          </span>
-          <span className="text-[10px] text-stone-400">
-            Both columns render symmetrically side-by-side
-          </span>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <MediaAssetEditor
-            label="Left Image (Slot 1 of 2)"
-            asset={slot1}
-            onChange={handleSlot1Change}
-            allowedRatios={["4:5", "1:1"]}
-          />
-          <MediaAssetEditor
-            label="Right Image (Slot 2 of 2)"
-            asset={slot2}
-            onChange={handleSlot2Change}
-            allowedRatios={["4:5", "1:1"]}
-          />
-        </div>
-      </div>
-    );
-  }
-
-  // Public Render Mode: Strictly 2 slots rendered side-by-side
+  // Public & Live In-Place Render Mode: Strictly 2 slots rendered side-by-side
   return (
     <div
       data-testid="image-duo-grid"
       className="grid grid-cols-1 sm:grid-cols-2 gap-6 items-start"
     >
-      <div data-testid="image-duo-slot-1" className="w-full">
+      <div data-testid="image-duo-slot-1" className="w-full relative group/slot1">
         <EditorialImage
           src={slot1.url}
           alt={slot1.alt}
@@ -91,9 +61,25 @@ export const ImageDuoBlock: React.FC<ImageDuoBlockProps> = ({
           caption={slot1.caption}
           photographerCredit={slot1.photographerCredit}
         />
+        {isEditMode && (
+          <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover/slot1:opacity-100 transition-opacity">
+            <button
+              type="button"
+              onClick={() => {
+                const newUrl = prompt("Enter image URL or Cloudinary path for Slot 1:", slot1.url);
+                if (newUrl && newUrl.trim()) {
+                  handleSlot1Change({ ...slot1, url: newUrl.trim() });
+                }
+              }}
+              className="px-2 py-1 bg-white/95 hover:bg-white text-stone-800 text-[10px] font-editorial-sans uppercase tracking-wider rounded shadow-xs border border-stone-300"
+            >
+              Replace Photo 1
+            </button>
+          </div>
+        )}
       </div>
 
-      <div data-testid="image-duo-slot-2" className="w-full">
+      <div data-testid="image-duo-slot-2" className="w-full relative group/slot2">
         <EditorialImage
           src={slot2.url}
           alt={slot2.alt}
@@ -101,6 +87,22 @@ export const ImageDuoBlock: React.FC<ImageDuoBlockProps> = ({
           caption={slot2.caption}
           photographerCredit={slot2.photographerCredit}
         />
+        {isEditMode && (
+          <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover/slot2:opacity-100 transition-opacity">
+            <button
+              type="button"
+              onClick={() => {
+                const newUrl = prompt("Enter image URL or Cloudinary path for Slot 2:", slot2.url);
+                if (newUrl && newUrl.trim()) {
+                  handleSlot2Change({ ...slot2, url: newUrl.trim() });
+                }
+              }}
+              className="px-2 py-1 bg-white/95 hover:bg-white text-stone-800 text-[10px] font-editorial-sans uppercase tracking-wider rounded shadow-xs border border-stone-300"
+            >
+              Replace Photo 2
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
