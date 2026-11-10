@@ -1,0 +1,60 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,500;1,600;1,700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-primary: #F7F3EC;
+  --bg-surface: #EFE8DD;
+  --bg-guide: #EAE2D5;
+  --text-primary: #151413;
+  --text-muted: #645F56;
+  --text-caption: #7D786F;
+  --accent-brown: #A06943;
+  --divider: #D8D0C3;
+  --border-light: #E2DBD0;
+
+  --font-cormorant: 'Cormorant Garamond', Georgia, serif;
+  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+/* Editorial typography classes */
+.font-editorial-serif {
+  font-family: var(--font-cormorant);
+}
+
+.font-editorial-sans {
+  font-family: var(--font-sans);
+}
+
+/* Subtle line accents */
+.editorial-border-bottom {
+  border-bottom: 1px solid var(--divider);
+}
+
+.editorial-border-top {
+  border-top: 1px solid var(--divider);
+}
+
+/* Link underline animation */
+.editorial-link-hover {
+  position: relative;
+  display: inline-block;
+  transition: opacity 0.2s ease;
+}
+
+.editorial-link-hover:hover {
+  opacity: 0.7;
+}
