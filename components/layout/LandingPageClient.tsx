@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import MainHeader from "@/components/layout/MainHeader";
 import MobileNavigation from "@/components/layout/MobileNavigation";
+import { SubmitShopModal } from "@/components/modals/SubmitShopModal";
 import HeroSection from "@/components/sections/HeroSection";
 import ExploreSection from "@/components/sections/ExploreSection";
 import LatestDiscoveries from "@/components/sections/LatestDiscoveries";
@@ -16,13 +17,18 @@ import Footer from "@/components/layout/Footer";
 
 export const LandingPageClient: React.FC = () => {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [submitModalOpen, setSubmitModalOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col relative selection:bg-surface-warm">
-      <MainHeader onToggleMobileNav={() => setMobileNavOpen(!mobileNavOpen)} />
+      <MainHeader
+        onToggleMobileNav={() => setMobileNavOpen(!mobileNavOpen)}
+        onSubmitShopClick={() => setSubmitModalOpen(true)}
+      />
       <MobileNavigation
         isOpen={mobileNavOpen}
         onClose={() => setMobileNavOpen(false)}
+        onSubmitShopClick={() => setSubmitModalOpen(true)}
       />
 
       <main className="flex-1 w-full">
@@ -42,6 +48,12 @@ export const LandingPageClient: React.FC = () => {
 
       {/* Comprehensive Editorial Footer */}
       <Footer />
+
+      {/* Global Submit Shop Modal */}
+      <SubmitShopModal
+        isOpen={submitModalOpen}
+        onClose={() => setSubmitModalOpen(false)}
+      />
     </div>
   );
 };

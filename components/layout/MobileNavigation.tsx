@@ -7,11 +7,13 @@ import Link from "next/link";
 interface MobileNavigationProps {
   isOpen: boolean;
   onClose: () => void;
+  onSubmitShopClick?: () => void;
 }
 
 export const MobileNavigation: React.FC<MobileNavigationProps> = ({
   isOpen,
   onClose,
+  onSubmitShopClick,
 }) => {
   if (!isOpen) return null;
 
@@ -58,14 +60,27 @@ export const MobileNavigation: React.FC<MobileNavigationProps> = ({
         </div>
 
         <div className="pt-8 border-t border-editorial-border flex flex-col gap-4">
-          <Link
-            href="#submit"
-            onClick={onClose}
-            className="inline-flex items-center justify-between font-editorial-sans text-[12px] uppercase tracking-[0.20em] font-medium text-foreground py-2 border-b border-foreground"
+          <button
+            type="button"
+            onClick={() => {
+              onClose();
+              if (onSubmitShopClick) onSubmitShopClick();
+            }}
+            className="inline-flex items-center justify-between font-editorial-sans text-[12px] uppercase tracking-[0.20em] font-medium text-foreground py-2 border-b border-foreground text-left"
           >
             <span>SUBMIT A SHOP</span>
             <ArrowUpRight className="w-4 h-4" />
+          </button>
+
+          <Link
+            href="/admin"
+            onClick={onClose}
+            className="inline-flex items-center justify-between font-editorial-sans text-[11px] uppercase tracking-[0.18em] font-medium text-stone-600 hover:text-stone-900 py-1"
+          >
+            <span>ADMIN CMS & STUDIO</span>
+            <ArrowUpRight className="w-3.5 h-3.5" />
           </Link>
+
           <p className="font-editorial-sans text-[10px] uppercase tracking-[0.20em] text-editorial-caption">
             EST. 2012 — AUSTRALIA
           </p>

@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Search, X, ArrowUpRight, SlidersHorizontal, MapPin } from "lucide-react";
 import { BOUTIQUES_DATA, Boutique } from "@/data/boutiques";
 
@@ -17,13 +18,26 @@ const CATEGORIES = [
 ];
 
 export const DirectoryListingClient: React.FC = () => {
+  const searchParams = useSearchParams();
   const [boutiquesList, setBoutiquesList] = useState<Boutique[]>(BOUTIQUES_DATA);
   const [selectedCity, setSelectedCity] = useState("ALL");
   const [selectedCategory, setSelectedCategory] = useState("ALL");
   const [searchQuery, setSearchQuery] = useState("");
 
+  // Sync search parameters from URL (e.g. from header search /directory?q=...)
+  useEffect(() => {
+    const qParam = searchParams.get("q");
+    if (qParam) setSearchQuery(qParam);
+
+    const cityParam = searchParams.get("city");
+    if (cityParam) setSelectedCity(cityParam.toUpperCase());
+
+    const catParam = searchParams.get("category");
+    if (catParam) setSelectedCategory(catParam.toUpperCase());
+  }, [searchParams]);
+
   // Live fetch from dynamic API
-  React.useEffect(() => {
+  useEffect(() => {
     fetch("/api/boutiques")
       .then((r) => r.json())
       .then((data) => {
@@ -224,7 +238,7 @@ export const DirectoryListingClient: React.FC = () => {
 
                   {/* Boutique Name */}
                   <h3 className="font-editorial-serif text-[19px] sm:text-[20px] font-normal leading-tight text-stone-900 group-hover:text-stone-600 transition-colors">
-                    <Link href="/shop" className="hover:underline">
+                    <Link href={`/shop?id=${boutique.id}`} className="hover:underline">
                       {boutique.name}
                     </Link>
                   </h3>
@@ -247,7 +261,7 @@ export const DirectoryListingClient: React.FC = () => {
                   </span>
 
                   <Link
-                    href="/shop"
+                    href={`/shop?id=${boutique.id}`}
                     className="inline-flex items-center gap-0.5 font-editorial-sans text-[9px] uppercase tracking-[0.18em] font-semibold text-stone-800 group-hover:text-stone-950 transition-colors"
                   >
                     <span>VIEW</span>

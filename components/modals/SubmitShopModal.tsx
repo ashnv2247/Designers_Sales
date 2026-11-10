@@ -6,12 +6,16 @@ import { X, Check, Upload, Store } from "lucide-react";
 interface SubmitShopModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onSuccess?: () => void;
 }
 
 export const SubmitShopModal: React.FC<SubmitShopModalProps> = ({
   isOpen,
   onClose,
+  onSuccess,
 }) => {
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
@@ -26,9 +30,46 @@ export const SubmitShopModal: React.FC<SubmitShopModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitted(true);
+    setLoading(true);
+    setErrorMsg("");
+
+    try {
+      const payload = {
+        name: formData.name,
+        city: formData.city,
+        neighborhood: formData.neighborhood,
+        category: formData.category,
+        address: formData.address || `${formData.neighborhood}, ${formData.city}`,
+        hours: "Mon–Sat 10am–6pm, Sun 11am–5pm",
+        priceTier: "$$$",
+        tagline: formData.description ? formData.description.slice(0, 80) : "Independent Australian Boutique",
+        description: formData.description || `Independent boutique in ${formData.neighborhood}, ${formData.city}.`,
+        curatorNote: `Submitted by ${formData.email}. Under editorial review.`,
+        image: "/images/hero/hero-main.jpg",
+        featured: false,
+        tags: [formData.category, formData.neighborhood, formData.city],
+      };
+
+      const res = await fetch("/api/boutiques", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || "Failed to submit boutique.");
+      }
+
+      setSubmitted(true);
+      if (onSuccess) onSuccess();
+    } catch (err: any) {
+      setErrorMsg(err.message || "An unexpected error occurred.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleReset = () => {
@@ -215,19 +256,28 @@ export const SubmitShopModal: React.FC<SubmitShopModalProps> = ({
                 />
               </div>
 
+              {errorMsg && (
+                <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs font-mono">
+                  {errorMsg}
+                </div>
+              )}
+
               <div className="pt-2 flex items-center justify-end gap-3 border-t border-editorial-border">
                 <button
                   type="button"
                   onClick={onClose}
-                  className="px-4 py-2 text-[9px] uppercase tracking-[0.20em] font-editorial-sans text-editorial-caption hover:text-foreground transition-colors"
+                  disabled={loading}
+                  className="px-4 py-2 text-[9px] uppercase tracking-[0.20em] font-editorial-sans text-editorial-caption hover:text-foreground transition-colors disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2.5 bg-foreground text-background font-editorial-sans text-[9px] uppercase tracking-[0.22em] font-semibold hover:opacity-90 transition-opacity"
+                  disabled={loading}
+                  className="px-6 py-2.5 bg-foreground text-background font-editorial-sans text-[9px] uppercase tracking-[0.22em] font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center gap-2"
                 >
-                  SUBMIT FOR CURATION ↗
+                  {loading && <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                  <span>{loading ? "SUBMITTING..." : "SUBMIT FOR CURATION ↗"}</span>
                 </button>
               </div>
             </form>

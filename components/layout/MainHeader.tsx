@@ -3,6 +3,8 @@
 import React, { useState } from "react";
 import { Search, Menu, X } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { SubmitShopModal } from "@/components/modals/SubmitShopModal";
 
 interface MainHeaderProps {
   onToggleMobileNav?: () => void;
@@ -13,8 +15,26 @@ export const MainHeader: React.FC<MainHeaderProps> = ({
   onToggleMobileNav,
   onSubmitShopClick,
 }) => {
+  const router = useRouter();
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      router.push(`/directory?q=${encodeURIComponent(searchQuery.trim())}`);
+      setSearchOpen(false);
+    }
+  };
+
+  const handleOpenSubmit = () => {
+    if (onSubmitShopClick) {
+      onSubmitShopClick();
+    } else {
+      setIsSubmitModalOpen(true);
+    }
+  };
 
   return (
     <header className="w-full pt-3.5 sm:pt-4 pb-2 bg-background relative z-40 select-none overflow-hidden">
@@ -58,7 +78,7 @@ export const MainHeader: React.FC<MainHeaderProps> = ({
 
             <button
               type="button"
-              onClick={onSubmitShopClick}
+              onClick={handleOpenSubmit}
               className="hidden md:inline-flex items-center gap-1 font-editorial-sans text-[8.5px] sm:text-[9px] uppercase tracking-[0.20em] font-medium text-foreground pb-0.5 border-b border-foreground hover:opacity-75 transition-opacity"
             >
               <span>SUBMIT A SHOP</span>
@@ -87,25 +107,30 @@ export const MainHeader: React.FC<MainHeaderProps> = ({
 
         {/* Search Bar Dropdown */}
         {searchOpen && (
-          <div className="mt-2 py-2 px-3 bg-surface-warm/80 rounded border border-editorial-border transition-all">
+          <form
+            onSubmit={handleSearchSubmit}
+            className="mt-2 py-2 px-3 bg-surface-warm/80 rounded border border-editorial-border transition-all"
+          >
             <div className="flex items-center gap-3 max-w-md mx-auto">
               <Search className="w-3.5 h-3.5 text-editorial-muted stroke-[1.5]" />
               <input
                 type="text"
-                placeholder="Search boutiques, designers, or cities..."
+                placeholder="Search boutiques, designers, or cities... (Press Enter)"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 autoFocus
                 className="w-full bg-transparent text-[12px] tracking-wide focus:outline-none placeholder:text-editorial-caption"
               />
               <button
+                type="button"
                 onClick={() => setSearchOpen(false)}
                 className="text-editorial-caption hover:text-foreground p-1"
+                aria-label="Close search"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
             </div>
-          </div>
+          </form>
         )}
 
         {/* Secondary Navigation */}
@@ -132,6 +157,12 @@ export const MainHeader: React.FC<MainHeaderProps> = ({
           </ul>
         </nav>
       </div>
+
+      {/* Global Submit Shop Modal */}
+      <SubmitShopModal
+        isOpen={isSubmitModalOpen}
+        onClose={() => setIsSubmitModalOpen(false)}
+      />
     </header>
   );
 };

@@ -2,8 +2,10 @@
 
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
+import { useSearchParams } from "next/navigation";
 import { ShopProfile, SimilarShopPreview } from "@/types/shop";
 import { SEED_SHOP_PROFILE, PRESET_STITCH_AND_TICKLE } from "@/data/seedShop";
+import { BOUTIQUES_DATA } from "@/data/boutiques";
 import { PrecinctMap } from "./PrecinctMap";
 import { DirectorySidebar } from "./DirectorySidebar";
 import { EditorialFeed } from "./EditorialFeed";
@@ -17,6 +19,8 @@ import { Product } from "@/types/product";
 import { Edit3 } from "lucide-react";
 
 export const ShopProfileClient: React.FC = () => {
+  const searchParams = useSearchParams();
+  const boutiqueId = searchParams.get("id");
   const [shop, setShop] = useState<ShopProfile>(SEED_SHOP_PROFILE);
   const [isEditMode, setIsEditMode] = useState<boolean>(false);
   const [isMetadataOpen, setIsMetadataOpen] = useState<boolean>(false);
@@ -24,8 +28,126 @@ export const ShopProfileClient: React.FC = () => {
   const [isTestSuiteOpen, setIsTestSuiteOpen] = useState<boolean>(false);
   const [isHydrated, setIsHydrated] = useState<boolean>(false);
 
-  // Hydrate from localStorage on client mount (TC-07)
+  // Dynamic Boutique Hydration from URL parameter or localStorage
   useEffect(() => {
+    if (boutiqueId) {
+      const found = BOUTIQUES_DATA.find((b) => b.id === boutiqueId);
+      if (found) {
+        // Check if there are boutique-specific saved edits
+        const stored = localStorage.getItem(`ds_shop_profile_${found.id}`);
+        if (stored) {
+          try {
+            const parsed = JSON.parse(stored);
+            if (parsed && parsed.name && parsed.contentBlocks) {
+              setShop(parsed);
+              setIsHydrated(true);
+              return;
+            }
+          } catch (e) {}
+        }
+
+        // Construct customized boutique profile
+        const adapted: ShopProfile = {
+          ...SEED_SHOP_PROFILE,
+          id: found.id,
+          slug: found.id,
+          name: found.name,
+          subtitle: found.tagline || SEED_SHOP_PROFILE.subtitle,
+          city: found.city,
+          precinct: `${found.neighborhood}, ${found.city}`,
+          categories: [found.category.toUpperCase(), "AUSTRALIAN DESIGN", "CURATED SPACE"],
+          address: {
+            street: found.address.split(",")[0] || found.address,
+            suburb: found.neighborhood,
+            state: found.city === "Sydney" ? "NSW" : found.city === "Brisbane" ? "QLD" : found.city === "Perth" ? "WA" : "VIC",
+            postcode: "3000",
+            formatted: found.address,
+          },
+          coordinates:
+            found.city === "Sydney"
+              ? { lat: -33.886, lng: 151.216 }
+              : found.city === "Brisbane"
+              ? { lat: -27.4578, lng: 153.0401 }
+              : found.city === "Perth"
+              ? { lat: -31.948, lng: 115.861 }
+              : { lat: -37.8064, lng: 144.9785 },
+          heroImage: {
+            id: `hero-${found.id}`,
+            url: found.image || "/images/hero/hero-main.jpg",
+            alt: `${found.name} storefront in ${found.neighborhood}`,
+            caption: `${found.neighborhood} architectural facade & entrance`,
+            aspectRatio: "16:10",
+            photographerCredit: "DS/ Editorial Archive",
+          },
+          contentBlocks: [
+            {
+              id: `block-what-we-love-${found.id}`,
+              type: "text_with_image",
+              order: 0,
+              heading: "WHAT WE LOVE",
+              bodyText: `${found.description}\n\n${found.curatorNote}`,
+              images: [
+                {
+                  id: `img-${found.id}`,
+                  url: found.image || "/images/hero/hero-main.jpg",
+                  alt: `${found.name} interior`,
+                  caption: `${found.name} collection display`,
+                  aspectRatio: "4:5",
+                  photographerCredit: "Elena Roche for DS/",
+                },
+              ],
+            },
+            {
+              id: `block-quote-${found.id}`,
+              type: "pull_quote",
+              order: 1,
+              quote: {
+                text: found.curatorNote || found.description,
+                author: found.name,
+                role: "Curator Selection · 2026",
+              },
+            },
+            {
+              id: `block-duo-${found.id}`,
+              type: "image_duo",
+              order: 2,
+              images: [
+                {
+                  id: `duo-1-${found.id}`,
+                  url: found.image || "/images/hero/hero-main.jpg",
+                  alt: `${found.name} detail view`,
+                  caption: "Bespoke architectural joinery",
+                  aspectRatio: "4:5",
+                },
+                {
+                  id: `duo-2-${found.id}`,
+                  url: "/images/explore/explore-handbag.jpg",
+                  alt: `${found.name} material focus`,
+                  caption: "Tactile materials and finishes",
+                  aspectRatio: "4:5",
+                },
+              ],
+            },
+            {
+              id: `block-roster-${found.id}`,
+              type: "designer_roster",
+              order: 3,
+              designers: [
+                { id: "des-1", name: "Christopher Esber", discipline: "Tailoring" },
+                { id: "des-2", name: "Song for the Mute", discipline: "Textiles" },
+                { id: "des-3", name: "Studio Henry Wilson", discipline: "Cast Bronze" },
+              ],
+            },
+          ],
+        };
+
+        setShop(adapted);
+        setIsHydrated(true);
+        return;
+      }
+    }
+
+    // Default Hydration from localStorage
     try {
       const stored = localStorage.getItem("ds_shop_profile_v1");
       if (stored) {
@@ -38,13 +160,16 @@ export const ShopProfileClient: React.FC = () => {
       console.warn("Could not hydrate shop profile from localStorage", e);
     }
     setIsHydrated(true);
-  }, []);
+  }, [boutiqueId]);
 
   // Save to localStorage whenever shop profile updates
   const handleUpdateShop = (updated: ShopProfile) => {
     setShop(updated);
     try {
       localStorage.setItem("ds_shop_profile_v1", JSON.stringify(updated));
+      if (updated.id) {
+        localStorage.setItem(`ds_shop_profile_${updated.id}`, JSON.stringify(updated));
+      }
     } catch (e) {
       console.warn("Could not persist shop profile to localStorage", e);
     }

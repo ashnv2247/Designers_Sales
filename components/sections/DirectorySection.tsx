@@ -288,6 +288,16 @@ export const DirectorySection: React.FC = () => {
                     </span>
                   ))}
                 </div>
+
+                <div className="pt-4 mt-2 border-t border-editorial-border flex justify-end">
+                  <a
+                    href={`/shop?id=${selectedBoutique.id}`}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-foreground text-background font-editorial-sans text-[9px] uppercase tracking-[0.22em] font-medium hover:bg-stone-800 transition-colors shadow-sm"
+                  >
+                    <span>EXPLORE EDITORIAL PROFILE</span>
+                    <ArrowUpRight className="w-3.5 h-3.5" />
+                  </a>
+                </div>
               </div>
             </div>
           </div>

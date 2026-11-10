@@ -1,3 +1,4 @@
+import React, { Suspense } from "react";
 import type { Metadata } from "next";
 import MainHeader from "@/components/layout/MainHeader";
 import Footer from "@/components/layout/Footer";
@@ -14,7 +15,9 @@ export default function ShopPage() {
     <div className="min-h-screen bg-[#FAF8F5] text-stone-900 flex flex-col relative selection:bg-stone-200">
       <MainHeader />
       <div className="flex-1">
-        <ShopProfileClient />
+        <Suspense fallback={<div className="min-h-screen bg-[#FAF8F5] p-12 text-stone-500 font-mono text-xs">Loading Boutique Profile & Editorial Feed...</div>}>
+          <ShopProfileClient />
+        </Suspense>
       </div>
       <Footer />
     </div>
