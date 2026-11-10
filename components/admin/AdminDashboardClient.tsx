@@ -5,12 +5,32 @@ import { Boutique } from "@/data/boutiques";
 import { JournalArticle } from "@/data/journal";
 import { GuideItem } from "@/lib/db";
 import { LiveInPlaceStudio } from "./LiveInPlaceStudio";
+import { NormalAdminPanel } from "./NormalAdminPanel";
 
-export const AdminDashboardClient: React.FC = () => {
+interface AdminDashboardClientProps {
+  initialView?: "dashboard" | "studio";
+}
+
+export const AdminDashboardClient: React.FC<AdminDashboardClientProps> = ({
+  initialView = "studio",
+}) => {
+  const [viewMode, setViewMode] = useState<"dashboard" | "studio">(initialView);
   const [boutiques, setBoutiques] = useState<Boutique[]>([]);
   const [guides, setGuides] = useState<GuideItem[]>([]);
   const [journalArticles, setJournalArticles] = useState<JournalArticle[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const urlView = params.get("view");
+      if (urlView === "dashboard" || urlView === "normal") {
+        setViewMode("dashboard");
+      } else if (urlView === "studio") {
+        setViewMode("studio");
+      }
+    }
+  }, []);
 
   // Load all initial dynamic data
   const loadData = async () => {
@@ -92,6 +112,12 @@ export const AdminDashboardClient: React.FC = () => {
     );
   }
 
+  if (viewMode === "dashboard") {
+    return (
+      <NormalAdminPanel onOpenStudio={() => setViewMode("studio")} />
+    );
+  }
+
   return (
     <LiveInPlaceStudio
       boutiques={boutiques}
@@ -101,6 +127,7 @@ export const AdminDashboardClient: React.FC = () => {
       onSaveGuide={handleSaveGuide}
       onSaveJournal={handleSaveJournal}
       onRefresh={loadData}
+      onOpenDashboard={() => setViewMode("dashboard")}
     />
   );
 };

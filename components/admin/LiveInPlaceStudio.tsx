@@ -35,6 +35,7 @@ import {
   ChevronDown as ChevronDownIcon,
   Sparkles,
   Share2,
+  Sliders,
 } from "lucide-react";
 
 interface LiveInPlaceStudioProps {
@@ -45,6 +46,7 @@ interface LiveInPlaceStudioProps {
   onSaveGuide: (g: GuideItem) => Promise<void>;
   onSaveJournal: (j: JournalArticle) => Promise<void>;
   onRefresh: () => Promise<void>;
+  onOpenDashboard?: () => void;
 }
 
 export const LiveInPlaceStudio: React.FC<LiveInPlaceStudioProps> = ({
@@ -55,6 +57,7 @@ export const LiveInPlaceStudio: React.FC<LiveInPlaceStudioProps> = ({
   onSaveGuide,
   onSaveJournal,
   onRefresh,
+  onOpenDashboard,
 }) => {
   // Navigation & Page State
   const [pageType, setPageType] = useState<"boutique" | "guide" | "journal">("boutique");
@@ -366,6 +369,18 @@ export const LiveInPlaceStudio: React.FC<LiveInPlaceStudioProps> = ({
               LIVE STUDIO
             </span>
           </Link>
+
+          {onOpenDashboard && (
+            <button
+              type="button"
+              onClick={onOpenDashboard}
+              className="px-2.5 py-1 bg-stone-100 hover:bg-stone-200 border border-stone-300 rounded text-[11px] font-editorial-sans uppercase tracking-wider inline-flex items-center gap-1.5 transition-colors text-stone-700"
+              title="Return to Normal Admin Panel"
+            >
+              <Sliders className="w-3.5 h-3.5 text-stone-600" />
+              <span className="hidden sm:inline">Admin Dashboard</span>
+            </button>
+          )}
 
           {/* Mode Tabs: Boutiques / Guides / Journal */}
           <div className="flex items-center bg-stone-100 border border-stone-200 rounded p-0.5 text-xs font-editorial-sans uppercase tracking-wider">
