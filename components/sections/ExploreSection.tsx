@@ -55,15 +55,18 @@ export const ExploreSection: React.FC = () => {
 
             {/* City Names List */}
             <div className="relative z-10 px-4 py-3 flex flex-col justify-center h-full gap-[3px]">
-              {CITIES.map((city) => (
-                <Link
-                  key={city}
-                  href={`#city-${city.toLowerCase()}`}
-                  className="font-editorial-sans text-[9px] uppercase tracking-[0.26em] text-white/95 hover:text-white font-medium transition-colors"
-                >
-                  {city}
-                </Link>
-              ))}
+              {CITIES.map((city) => {
+                const formattedCity = city.charAt(0) + city.slice(1).toLowerCase();
+                return (
+                  <Link
+                    key={city}
+                    href={`/directory?city=${encodeURIComponent(formattedCity)}`}
+                    className="font-editorial-sans text-[9px] uppercase tracking-[0.26em] text-white/95 hover:text-white font-medium transition-colors"
+                  >
+                    {city}
+                  </Link>
+                );
+              })}
             </div>
           </div>
 
@@ -118,15 +121,18 @@ export const ExploreSection: React.FC = () => {
             />
             <div className="absolute inset-0 bg-black/45" />
             <div className="relative z-10 p-4 flex flex-col justify-center h-full gap-1">
-              {CITIES.map((city) => (
-                <Link
-                  key={city}
-                  href={`#city-${city.toLowerCase()}`}
-                  className="font-editorial-sans text-[9px] uppercase tracking-[0.24em] text-white/95 font-medium"
-                >
-                  {city}
-                </Link>
-              ))}
+              {CITIES.map((city) => {
+                const formattedCity = city.charAt(0) + city.slice(1).toLowerCase();
+                return (
+                  <Link
+                    key={city}
+                    href={`/directory?city=${encodeURIComponent(formattedCity)}`}
+                    className="font-editorial-sans text-[9px] uppercase tracking-[0.24em] text-white/95 font-medium"
+                  >
+                    {city}
+                  </Link>
+                );
+              })}
             </div>
           </div>
           <div className="relative aspect-[4/3] overflow-hidden bg-surface-card shadow-sm">

@@ -1,6 +1,19 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('DesignerSale Live In-Place Canvas Studio Verification', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem(
+        'ds_curator_session',
+        JSON.stringify({
+          id: 'curator-demo',
+          email: 'curator@designersale.com.au',
+          name: 'Elena Roche',
+          role: 'Chief Design Curator',
+        })
+      );
+    });
+  });
   test('Admin Studio renders live in-place toolbar, page switcher, and viewport controls', async ({ page }) => {
     await page.goto('/admin', { waitUntil: 'domcontentloaded' });
 

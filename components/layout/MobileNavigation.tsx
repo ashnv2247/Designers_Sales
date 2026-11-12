@@ -37,7 +37,7 @@ export const MobileNavigation: React.FC<MobileNavigationProps> = ({
             </button>
           </div>
 
-          <nav className="mt-8 flex flex-col gap-6">
+          <nav className="mt-8 flex flex-col gap-5">
             {["SHOPS", "CITIES", "GUIDES", "DESIGNERS", "JOURNAL"].map(
               (item) => (
                 <Link
@@ -50,12 +50,20 @@ export const MobileNavigation: React.FC<MobileNavigationProps> = ({
                       : `/#${item.toLowerCase()}`
                   }
                   onClick={onClose}
-                  className="font-editorial-sans text-[14px] uppercase tracking-[0.24em] font-medium text-foreground hover:text-editorial-accent transition-colors py-1"
+                  className="font-editorial-sans text-[13px] uppercase tracking-[0.24em] font-medium text-foreground hover:text-editorial-accent transition-colors py-1"
                 >
                   {item}
                 </Link>
               )
             )}
+            <Link
+              href="/login"
+              onClick={onClose}
+              className="font-editorial-sans text-[11px] uppercase tracking-[0.22em] font-semibold text-editorial-accent py-1.5 border-t border-editorial-border/60 mt-2 flex items-center justify-between"
+            >
+              <span>CURATOR PORTAL</span>
+              <ArrowUpRight className="w-3.5 h-3.5" />
+            </Link>
           </nav>
         </div>
 

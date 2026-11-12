@@ -36,6 +36,7 @@ import {
   Sparkles,
   Share2,
   Sliders,
+  LogOut,
 } from "lucide-react";
 
 interface LiveInPlaceStudioProps {
@@ -354,6 +355,14 @@ export const LiveInPlaceStudio: React.FC<LiveInPlaceStudioProps> = ({
     }
   };
 
+  const handleLogout = async () => {
+    localStorage.removeItem("ds_curator_session");
+    try {
+      await fetch("/api/auth", { method: "DELETE" });
+    } catch {}
+    window.location.href = "/login";
+  };
+
   return (
     <div className="min-h-screen bg-[#FAF8F5] text-stone-900 flex flex-col select-none">
       {/* -------------------------------------------------------------------- */}
@@ -532,6 +541,16 @@ export const LiveInPlaceStudio: React.FC<LiveInPlaceStudioProps> = ({
           >
             <Save className="w-3.5 h-3.5" />
             <span>Save Page</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="px-2.5 py-1.5 bg-stone-100 hover:bg-red-50 text-stone-700 hover:text-red-700 border border-stone-300 hover:border-red-300 rounded text-xs font-editorial-sans uppercase tracking-wider inline-flex items-center gap-1 transition-colors"
+            title="Log out of Curatorial Studio"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Sign Out</span>
           </button>
         </div>
       </header>

@@ -30,6 +30,7 @@ import {
   Menu,
   ChevronRight,
   Sparkles,
+  LogOut,
 } from "lucide-react";
 
 interface NormalAdminPanelProps {
@@ -453,6 +454,31 @@ export const NormalAdminPanel: React.FC<NormalAdminPanelProps> = ({ onOpenStudio
                 <ExternalLink className="w-3 h-3" />
               </Link>
             </div>
+          </div>
+
+          {/* Authenticated Curator Card */}
+          <div className="pt-4 border-t border-stone-800 flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-full bg-stone-800 border border-stone-700 flex items-center justify-center text-[10px] font-bold text-stone-200">
+                ER
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[11px] font-medium text-stone-200 leading-tight">Elena Roche</span>
+                <span className="text-[8.5px] uppercase tracking-wider text-stone-500">Chief Curator</span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                localStorage.removeItem("ds_curator_session");
+                fetch("/api/auth", { method: "DELETE" }).catch(() => {});
+                window.location.href = "/login";
+              }}
+              className="p-1.5 text-stone-400 hover:text-red-400 transition-colors"
+              title="Sign out of Admin Dashboard"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+            </button>
           </div>
         </div>
       </aside>

@@ -56,3 +56,4 @@ graph TD
 ### Step 4: True WYSIWYG Live On-Page Studio & Classic Dashboard
 - Curators toggle between the Kaftan-style Live On-Page Studio (`/admin`) and the classic Sidebar Admin (`/admin/dashboard`) with one click.
 - Edits update without clunky forms or page shifts.
+

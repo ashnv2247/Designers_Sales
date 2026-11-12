@@ -67,3 +67,4 @@
 | **U48** | Keyboard-only user navigating header | Tab through header links and buttons | **PASS** | 5/5 | `U48-keyboard-nav.png` |
 | **U49** | Accessibility user checking image alt tags | Inspect all boutique storefront image alt tags | **PASS** | 5/5 | `U49-image-a11y.png` |
 | **U50** | In-browser automated diagnostics runner | Execute all 10 diagnostic test cases on `/shop` | **PASS** | 5/5 | `U50-test-runner.png` |
+

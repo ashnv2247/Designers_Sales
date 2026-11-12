@@ -58,3 +58,4 @@ journey
 1. **Connect Header Search:** When a user types a query in the `MainHeader` search bar and submits, navigate them to `/directory?q={query}`.
 2. **Wire "SUBMIT A SHOP":** Make the header button open `SubmitShopModal` everywhere, and ensure form submission calls `POST /api/boutiques` to persist the new submission.
 3. **Dynamic Boutique Routing:** Ensure cards across the Landing Page and Directory Index link to `/shop?id={boutique.id}`, and update `ShopProfileClient` to render the matching boutique's title, subtitle, precinct, city, map coordinates, hero image, and content blocks.
+

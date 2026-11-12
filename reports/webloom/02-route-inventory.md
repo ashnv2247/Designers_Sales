@@ -25,3 +25,4 @@ This inventory details every route segment, API endpoint, rendering model, authe
 ## 2. Orphaned & Disconnected Route Findings
 1. `/shops`: Redundant route segment that serves identical content to `/directory`. Both should be maintained with clean canonical links to avoid split traffic.
 2. Direct deep linking to `/shop?id=<boutique-id>`: Previously unhandled in `ShopProfileClient.tsx`.
+

@@ -86,3 +86,4 @@ sequenceDiagram
 ## 3. Data Integrity & Validation Findings
 - **Data Fallback Resilience:** When Supabase is not running locally, `lib/db.ts` intercepts all queries safely and returns in-memory seeded records without throwing unhandled exceptions.
 - **State Synchronization Gap:** Previously, changes made inside `ShopProfileClient` only saved to `localStorage.ds_shop_profile_v1` without a button to sync directly to the backend database API.
+

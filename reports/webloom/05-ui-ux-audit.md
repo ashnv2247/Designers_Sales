@@ -54,3 +54,4 @@ DESIGNERSALE employs an austere, high-fashion editorial aesthetic inspired by pr
 | Melbourne Guide | 3 precincts | Image progressive | N/A | Fallback text | Vertical itinerary |
 | Admin Studio | Live on-page canvas | Saving indicator | "+ Add Section" strip | Toast notification | Responds to viewport toggle |
 | Admin Dashboard| Tabbed data tables | Spinner badge | "No records created" | Modal alert | Collapsible sidebar |
+

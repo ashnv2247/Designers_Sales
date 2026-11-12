@@ -88,7 +88,7 @@ export const Footer: React.FC = () => {
               {["Melbourne", "Sydney", "Brisbane", "Perth", "Adelaide", "Byron Bay", "Hobart"].map((city) => (
                 <li key={city}>
                   <Link
-                    href={`#city-${city.toLowerCase()}`}
+                    href={`/directory?city=${encodeURIComponent(city)}`}
                     className="font-editorial-serif text-[14px] text-white/80 hover:text-white transition-colors"
                   >
                     {city}
@@ -103,13 +103,20 @@ export const Footer: React.FC = () => {
               DISCIPLINES
             </h5>
             <ul className="space-y-2">
-              {["Designer Apparel", "Archival & Vintage", "Ceramics & Homewares", "Rare Art & Bookshops", "European Antiques", "Perfumeries & Concept"].map((d) => (
-                <li key={d}>
+              {[
+                { label: "Designer Apparel", cat: "Fashion" },
+                { label: "Archival & Vintage", cat: "Fashion" },
+                { label: "Ceramics & Homewares", cat: "Ceramics & Home" },
+                { label: "Rare Art & Bookshops", cat: "Books & Art" },
+                { label: "European Antiques", cat: "Antiques" },
+                { label: "Perfumeries & Concept", cat: "Concept" },
+              ].map((d) => (
+                <li key={d.label}>
                   <Link
-                    href="#shops"
+                    href={`/directory?category=${encodeURIComponent(d.cat)}`}
                     className="font-editorial-serif text-[14px] text-white/80 hover:text-white transition-colors"
                   >
-                    {d}
+                    {d.label}
                   </Link>
                 </li>
               ))}
@@ -121,13 +128,19 @@ export const Footer: React.FC = () => {
               EDITORIAL
             </h5>
             <ul className="space-y-2">
-              {["The Journal", "The Melbourne Edit", "The Sydney Precincts", "James Street Guide", "Curator Guidelines", "Archive"].map((e) => (
-                <li key={e}>
+              {[
+                { label: "The Journal", href: "/#journal" },
+                { label: "The Melbourne Edit", href: "/guides/melbourne-edit" },
+                { label: "The Sydney Precincts", href: "/guides/melbourne-edit" },
+                { label: "Curator Guidelines", href: "/directory" },
+                { label: "Curator Login", href: "/login" },
+              ].map((e) => (
+                <li key={e.label}>
                   <Link
-                    href="#journal"
+                    href={e.href}
                     className="font-editorial-serif text-[14px] text-white/80 hover:text-white transition-colors"
                   >
-                    {e}
+                    {e.label}
                   </Link>
                 </li>
               ))}
@@ -141,7 +154,7 @@ export const Footer: React.FC = () => {
             <ul className="space-y-2">
               <li>
                 <Link
-                  href="#submit"
+                  href="/directory?action=submit"
                   className="font-editorial-serif text-[14px] text-white hover:underline inline-flex items-center gap-1 font-medium"
                 >
                   <span>Submit a Boutique</span>
@@ -149,17 +162,18 @@ export const Footer: React.FC = () => {
                 </Link>
               </li>
               <li>
-                <Link href="#about" className="font-editorial-serif text-[14px] text-white/80 hover:text-white">
+                <Link href="/directory" className="font-editorial-serif text-[14px] text-white/80 hover:text-white">
                   About DesignerSale
                 </Link>
               </li>
               <li>
-                <Link href="#press" className="font-editorial-serif text-[14px] text-white/80 hover:text-white">
-                  Press Inquiries
+                <Link href="/login" className="font-editorial-serif text-[14px] text-editorial-accent hover:underline inline-flex items-center gap-1">
+                  <span>Curator Studio & Portal</span>
+                  <ArrowUpRight className="w-3 h-3" />
                 </Link>
               </li>
               <li>
-                <Link href="#terms" className="font-editorial-serif text-[14px] text-white/80 hover:text-white">
+                <Link href="/directory" className="font-editorial-serif text-[14px] text-white/80 hover:text-white">
                   Privacy & Editorial Policy
                 </Link>
               </li>

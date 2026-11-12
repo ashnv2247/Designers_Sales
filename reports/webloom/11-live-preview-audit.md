@@ -38,3 +38,4 @@ graph TD
 
 ## 4. Conclusion
 The live preview operates with pure visual parity. Edits never cause discrepancy between the visual editor and the final public output.
+

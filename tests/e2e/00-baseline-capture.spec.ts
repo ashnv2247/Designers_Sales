@@ -4,6 +4,20 @@ import * as path from 'path';
 test.describe('Baseline Application Capture & State Audit', () => {
   const screenshotDir = path.resolve(process.cwd(), 'reports/webloom/screenshots');
 
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem(
+        'ds_curator_session',
+        JSON.stringify({
+          id: 'curator-demo',
+          email: 'curator@designersale.com.au',
+          name: 'Elena Roche',
+          role: 'Chief Design Curator',
+        })
+      );
+    });
+  });
+
   test('Capture Desktop Baseline across all key routes', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
 
@@ -73,3 +87,4 @@ test.describe('Baseline Application Capture & State Audit', () => {
     await page.screenshot({ path: `${screenshotDir}/mobile/shop-mobile.png` });
   });
 });
+

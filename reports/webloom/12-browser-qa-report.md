@@ -29,3 +29,4 @@
 2. **Horizontal Overflow Verification:** Verified across 360px, 390px, 430px, 768px, 1024px, 1280px, 1440px, and 1920px viewports with zero horizontal scrollbar overflow.
 3. **Broken Image Fallback:** TC-05 verified that invalid image URLs safely render the graceful fallback frame: `DS/ ARCHIVE IMAGE UNAVAILABLE`.
 4. **Form Validation & Network:** HTML5 and React state validations prevent empty or invalid email submissions to `/api/boutiques`.
+

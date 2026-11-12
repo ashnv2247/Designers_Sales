@@ -31,3 +31,4 @@
 2. **Supabase Local Connectivity:**
    - *Risk:* If local Docker Supabase is not running, API requests could fail with connection refused.
    - *Mitigation:* `lib/db.ts` uses `checkSupabaseConnection()` with in-memory caching fallback, ensuring continuous availability.
+

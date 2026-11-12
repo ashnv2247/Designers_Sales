@@ -1,6 +1,17 @@
 import { test, expect } from "@playwright/test";
 
 test("Capture DesignerSale Live In-Place Studio", async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem(
+      'ds_curator_session',
+      JSON.stringify({
+        id: 'curator-demo',
+        email: 'curator@designersale.com.au',
+        name: 'Elena Roche',
+        role: 'Chief Design Curator',
+      })
+    );
+  });
   await page.setViewportSize({ width: 1440, height: 900 });
 
   // 1. Visit Live In-Place Studio (Shop Profile)

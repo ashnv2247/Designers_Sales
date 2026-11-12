@@ -35,3 +35,4 @@ Regressions Detected: ZERO
 - **Out of Bounds Check (TC-03):** Moving the first block up or the last block down performs a safe no-op without mutating state or triggering array out-of-bounds exceptions.
 - **Image Duo Constraint (TC-04):** The `ImageDuoBlock` strictly enforces 2 slots; removing or editing handles slot boundaries cleanly.
 - **Zero Console Errors:** Dev server logs confirmed zero unhandled promise rejections or hydration mismatches.
+

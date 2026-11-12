@@ -23,3 +23,4 @@ Evaluated against **WCAG 2.2 Level AA** criteria covering Perceivable, Operable,
 ## 3. Notable Improvements Applied
 - Added explicit `aria-label="Toggle search"`, `aria-label="Open menu"`, and `aria-label="Close modal"` to interactive icon buttons.
 - Ensured form labels are semantically associated with input elements in `SubmitShopModal`.
+

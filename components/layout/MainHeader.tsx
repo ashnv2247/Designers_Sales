@@ -73,7 +73,7 @@ export const MainHeader: React.FC<MainHeaderProps> = ({
               href="/admin"
               className="hidden lg:inline-flex items-center gap-1 font-editorial-sans text-[7.5px] uppercase tracking-[0.20em] font-semibold text-stone-700 px-2 py-0.5 border border-stone-300 rounded hover:bg-stone-100 transition-colors"
             >
-              <span>ADMIN CMS</span>
+              <span>CURATOR STUDIO</span>
             </Link>
 
             <button

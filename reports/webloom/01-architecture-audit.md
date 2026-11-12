@@ -67,3 +67,4 @@ graph TD
 2. **"Submit a Shop" Orphan:** The `SubmitShopModal` existed in `components/modals/` but was not wired into `MainHeader` or landing page actions.
 3. **Static Routing to Default Shop:** Cards in `DirectoryListingClient` and `DirectorySection` linked to `/shop` rather than passing the selected boutique ID (`/shop?id=...`).
 4. **Shop Profile Query Hydration:** `ShopProfileClient` relied solely on `SEED_SHOP_PROFILE` or a single `localStorage` key rather than dynamically loading the specific boutique requested via URL parameters.
+

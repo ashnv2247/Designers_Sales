@@ -67,7 +67,7 @@ export const LatestDiscoveries: React.FC = () => {
           {DISCOVERIES.map((item) => (
             <Link
               key={item.id}
-              href="/directory"
+              href={`/shop?id=${item.id}`}
               className="flex flex-col group cursor-pointer"
             >
               {/* Image Container with strict editorial aspect ratio */}

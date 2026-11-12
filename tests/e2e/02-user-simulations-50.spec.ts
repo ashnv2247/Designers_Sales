@@ -4,6 +4,20 @@ import * as path from 'path';
 test.describe('50 Distinct Synthetic User Persona Simulations', () => {
   const simDir = path.resolve(process.cwd(), 'reports/webloom/screenshots/simulations');
 
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem(
+        'ds_curator_session',
+        JSON.stringify({
+          id: 'curator-demo',
+          email: 'curator@designersale.com.au',
+          name: 'Elena Roche',
+          role: 'Chief Design Curator',
+        })
+      );
+    });
+  });
+
   // ---------------------------------------------------------------------------
   // GROUP A: FIRST-TIME USERS (U01 - U10)
   // ---------------------------------------------------------------------------

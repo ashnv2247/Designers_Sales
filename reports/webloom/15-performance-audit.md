@@ -30,3 +30,4 @@
   - Tablet: `(max-width: 1024px) 50vw`
   - Desktop: `320px` or `840px`
 - Eliminates over-fetching of high-resolution images on mobile devices.
+

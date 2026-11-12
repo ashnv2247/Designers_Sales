@@ -34,3 +34,4 @@
 - **Partially Connected / Disconnected:** 3 features (Header search routing, Submit Shop modal wiring, Card deep linking)
 - **Functionally Incomplete:** 2 features (Dynamic shop profile hydration by ID, Directory URL param sync)
 - **Broken / Fake:** 0 features
+

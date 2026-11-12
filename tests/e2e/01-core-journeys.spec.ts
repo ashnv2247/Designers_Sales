@@ -82,6 +82,13 @@ test.describe('DESIGNERSALE Core User Journeys & End-to-End Verification', () =>
     await page.goto('/admin');
     await page.waitForLoadState('networkidle');
 
+    // Unlock via Curatorial Security Gate if unauthenticated
+    const unlockBtn = page.getByRole('button', { name: '1-Click Demo Curator Unlock' });
+    if (await unlockBtn.isVisible()) {
+      await unlockBtn.click();
+      await page.waitForLoadState('networkidle');
+    }
+
     // Verify Live Canvas renders without clunky form boxes
     await expect(page.locator('text=BLOCK 01 / Text with Visual')).not.toBeVisible();
     await expect(page.locator('button', { hasText: /Admin Dashboard/i })).toBeVisible();

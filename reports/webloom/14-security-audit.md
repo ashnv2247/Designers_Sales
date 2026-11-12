@@ -29,3 +29,4 @@ The security posture of DESIGNERSALE was evaluated against common web vulnerabil
 
 ### 2.5 Cross-Origin Resource Sharing (CORS) & Rate Limiting
 - **Recommendation:** When deploying to Vercel or production hosting, configure edge middleware rate limiting on `POST /api/boutiques` (e.g., maximum 10 submissions per IP per hour) to mitigate spam submissions.
+

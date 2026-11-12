@@ -39,3 +39,4 @@ All high-priority architectural defects and incomplete feature implementations i
 - **Issue:** Needed seamless switching between Kaftan-style Live On-Page Studio and classic Sidebar Admin Dashboard.
 - **Implementation:** Created `/admin/dashboard` route and unified `AdminDashboardClient` with 1-click toggling between `NormalAdminPanel` and `LiveInPlaceStudio`.
 - **Verification:** Verified in Playwright Journey 4 and Personas U28–U30.
+

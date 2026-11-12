@@ -75,3 +75,4 @@ graph LR
 1. **Production Deployment:** The codebase is ready for immediate deployment to Vercel, AWS Amplify, or a containerized Node.js cluster.
 2. **Environment Configuration:** When connecting to a production remote Supabase instance, supply `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` in environment secrets.
 3. **Continuous Integration (CI):** Add `npx playwright test` to GitHub Actions workflow to run regression suites on future commits.
+
