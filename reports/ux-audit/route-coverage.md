@@ -48,3 +48,4 @@
 | Standard Laptop | `1366 × 768` | Standard Notebook | Full multi-column editorial layout, balanced whitespace | **PASS** |
 | Standard Desktop | `1440 × 900` | MacBook Pro / Desktop | 1400px constrained container, elegant margin balance | **PASS** |
 | Large Desktop | `1920 × 1080` | Full HD Monitor | Centered layout, ultra-crisp typography, zero distortion | **PASS** |
+

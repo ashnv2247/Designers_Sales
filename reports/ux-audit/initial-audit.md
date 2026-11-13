@@ -55,3 +55,4 @@ DesignerSale is a boutique architectural discovery platform and curation portal 
 ### 3.3 Visual Hierarchy & Typography
 - **Editorial Luxury Standard:** Strict aesthetic maintained via `Fraunces` serif headings and `Plus Jakarta Sans` tracking-spaced labels (`tracking-[0.24em]`).
 - **Zero Horizontal Overflow:** Verified across all mobile breakpoints (360px, 375px, 390px, 430px) and tablet/desktop viewports.
+

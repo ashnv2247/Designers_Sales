@@ -21,12 +21,23 @@ import { Edit3 } from "lucide-react";
 export const ShopProfileClient: React.FC = () => {
   const searchParams = useSearchParams();
   const boutiqueId = searchParams.get("id");
+  const isCmsRequested = searchParams.get("cms") === "true" || searchParams.get("studio") === "true";
+  const [showCuratorToolbar, setShowCuratorToolbar] = useState<boolean>(false);
   const [shop, setShop] = useState<ShopProfile>(SEED_SHOP_PROFILE);
   const [isEditMode, setIsEditMode] = useState<boolean>(false);
   const [isMetadataOpen, setIsMetadataOpen] = useState<boolean>(false);
   const [isSimilarShopsOpen, setIsSimilarShopsOpen] = useState<boolean>(false);
   const [isTestSuiteOpen, setIsTestSuiteOpen] = useState<boolean>(false);
   const [isHydrated, setIsHydrated] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (isCmsRequested && typeof window !== "undefined") {
+      const session = localStorage.getItem("ds_curator_session");
+      if (session) {
+        setShowCuratorToolbar(true);
+      }
+    }
+  }, [isCmsRequested]);
 
   // Dynamic Boutique Hydration from URL parameter or localStorage
   useEffect(() => {
@@ -207,16 +218,18 @@ export const ShopProfileClient: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#FAF8F5] text-stone-900 font-sans selection:bg-stone-200">
-      {/* Studio CMS & Reader Floating Toolbar */}
-      <EditorialToolbar
-        isEditMode={isEditMode}
-        onToggleEditMode={() => setIsEditMode(!isEditMode)}
-        shop={shop}
-        onImportShop={handleUpdateShop}
-        onResetToSeed={handleResetToSeed}
-        onSelectPreset={handleSelectPreset}
-        onOpenTestSuite={() => setIsTestSuiteOpen(true)}
-      />
+      {/* Studio CMS & Reader Floating Toolbar is ONLY visible to authenticated curators in explicit ?cms=true mode */}
+      {showCuratorToolbar && (
+        <EditorialToolbar
+          isEditMode={isEditMode}
+          onToggleEditMode={() => setIsEditMode(!isEditMode)}
+          shop={shop}
+          onImportShop={handleUpdateShop}
+          onResetToSeed={handleResetToSeed}
+          onSelectPreset={handleSelectPreset}
+          onOpenTestSuite={() => setIsTestSuiteOpen(true)}
+        />
+      )}
 
       {/* Main Shop Profile Container */}
       <main className="max-w-[1280px] mx-auto px-4 sm:px-8 py-8 sm:py-10">
@@ -334,11 +347,13 @@ export const ShopProfileClient: React.FC = () => {
       />
 
       {/* Diagnostic Test Runner Drawer */}
-      <DiagnosticTestSuite
-        isOpen={isTestSuiteOpen}
-        onClose={() => setIsTestSuiteOpen(false)}
-        shop={shop}
-      />
+      {showCuratorToolbar && (
+        <DiagnosticTestSuite
+          isOpen={isTestSuiteOpen}
+          onClose={() => setIsTestSuiteOpen(false)}
+          shop={shop}
+        />
+      )}
     </div>
   );
 };

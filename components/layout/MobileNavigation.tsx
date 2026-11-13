@@ -56,14 +56,6 @@ export const MobileNavigation: React.FC<MobileNavigationProps> = ({
                 </Link>
               )
             )}
-            <Link
-              href="/login"
-              onClick={onClose}
-              className="font-editorial-sans text-[11px] uppercase tracking-[0.22em] font-semibold text-editorial-accent py-1.5 border-t border-editorial-border/60 mt-2 flex items-center justify-between"
-            >
-              <span>CURATOR PORTAL</span>
-              <ArrowUpRight className="w-3.5 h-3.5" />
-            </Link>
           </nav>
         </div>
 

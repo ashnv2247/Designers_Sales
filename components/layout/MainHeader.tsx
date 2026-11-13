@@ -69,13 +69,6 @@ export const MainHeader: React.FC<MainHeaderProps> = ({
 
           {/* Right area: SUBMIT A SHOP, Search, Hamburger */}
           <div className="flex items-center justify-end gap-2.5 sm:gap-5 flex-shrink-0">
-            <Link
-              href="/admin"
-              className="hidden lg:inline-flex items-center gap-1 font-editorial-sans text-[7.5px] uppercase tracking-[0.20em] font-semibold text-stone-700 px-2 py-0.5 border border-stone-300 rounded hover:bg-stone-100 transition-colors"
-            >
-              <span>CURATOR STUDIO</span>
-            </Link>
-
             <button
               type="button"
               onClick={handleOpenSubmit}
