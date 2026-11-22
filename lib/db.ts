@@ -2,7 +2,7 @@ import { BOUTIQUES_DATA, Boutique } from "@/data/boutiques";
 import { PRODUCTS_SEED_DATA } from "@/data/products";
 import { JOURNAL_ARTICLES, JournalArticle } from "@/data/journal";
 import { Product } from "@/types/product";
-import { supabase, checkSupabaseConnection } from "./supabaseClient";
+import { supabaseAdmin as supabase, checkSupabaseConnection } from "./supabaseClient";
 
 // In-memory cache for ultra-fast local state synchronization
 let localBoutiques: Boutique[] = [...BOUTIQUES_DATA];
